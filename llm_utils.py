@@ -3,6 +3,7 @@ from typing import Dict, List, Optional
 
 from openai import OpenAI
 
+
 def call_openrouter(
     messages: List[Dict[str, str]],
     model: str = "openai/gpt-4o-mini",
@@ -40,21 +41,15 @@ def call_openrouter(
         extra_headers["X-Title"] = site_name
 
     completion = client.chat.completions.create(
-        extra_headers=extra_headers,
-        model=model,
-        messages=messages
+        extra_headers=extra_headers, model=model, messages=messages
     )
 
     return completion.choices[0].message.content
 
+
 if __name__ == "__main__":
     # Test the function
-    test_messages = [
-        {
-            "role": "user",
-            "content": "What is the meaning of life?"
-        }
-    ]
+    test_messages = [{"role": "user", "content": "What is the meaning of life?"}]
 
     try:
         response = call_openrouter(test_messages)
