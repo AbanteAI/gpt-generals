@@ -31,9 +31,11 @@ jobs:
 
     - name: Lint with ruff
       run: |
+        . .venv/bin/activate
         ruff check .
         ruff format --check .
 
     - name: Type check with pyright
       run: |
+        . .venv/bin/activate
         pyright
