@@ -6,7 +6,7 @@ authors = [
     {name = "Mentat", email = "info@mentat.ai"},
 ]
 dependencies = [
-    "openai>=1.0.0",
+    "openai>=1.63.2",
 ]
 requires-python = ">=3.11"
 
