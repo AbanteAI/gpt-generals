@@ -1,6 +1,7 @@
+from typing import Dict, List, Optional
+
 import os
 from openai import OpenAI
-from typing import List, Dict, Optional
 
 def call_openrouter(
     messages: List[Dict[str, str]],
@@ -54,7 +55,7 @@ if __name__ == "__main__":
             "content": "What is the meaning of life?"
         }
     ]
-    
+
     try:
         response = call_openrouter(test_messages)
         print("Test successful!")
