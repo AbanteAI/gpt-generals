@@ -1,6 +1,6 @@
+import os
 from typing import Dict, List, Optional
 
-import os
 from openai import OpenAI
 
 def call_openrouter(
