@@ -1,11 +1,12 @@
 import os
-from typing import Dict, List, Optional
+from typing import Optional
 
 from openai import OpenAI
+from openai.types.chat import ChatCompletionMessageParam
 
 
 def call_openrouter(
-    messages: List[Dict[str, str]],
+    messages: list[ChatCompletionMessageParam],
     model: str = "openai/gpt-4o-mini",
     site_url: Optional[str] = None,
     site_name: Optional[str] = None,
@@ -44,12 +45,17 @@ def call_openrouter(
         extra_headers=extra_headers, model=model, messages=messages
     )
 
-    return completion.choices[0].message.content
+    content = completion.choices[0].message.content
+    if content is None:
+        raise ValueError("No content in response")
+    return content
 
 
 if __name__ == "__main__":
     # Test the function
-    test_messages = [{"role": "user", "content": "What is the meaning of life?"}]
+    test_messages: list[ChatCompletionMessageParam] = [
+        {"role": "user", "content": "What is the meaning of life?"}
+    ]
 
     try:
         response = call_openrouter(test_messages)
