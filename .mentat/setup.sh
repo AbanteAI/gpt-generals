@@ -18,6 +18,4 @@ uv venv
 
 # Install dependencies
 uv pip install -r requirements.txt
-
-# Install dev dependencies
-uv pip install ruff pyright
+uv pip install -r dev-requirements.txt
