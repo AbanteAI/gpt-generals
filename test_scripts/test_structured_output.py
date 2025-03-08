@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
 """
 Test script for demonstrating structured output with Pydantic models.
 """
@@ -13,10 +14,9 @@ from pydantic import BaseModel, Field
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Local imports - after path setup
-# ruff: noqa: E402
-from game_engine import GameEngine  # noqa: E402
-from llm_utils import Messages, call_openrouter  # noqa: E402
-from map_generator import MapGenerator  # noqa: E402
+from game_engine import GameEngine
+from llm_utils import Messages, call_openrouter
+from map_generator import MapGenerator
 
 
 class Move(BaseModel):

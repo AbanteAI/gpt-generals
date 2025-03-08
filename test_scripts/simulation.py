@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
 """
 Simulation script for the GPT Generals game with random movements.
 """
@@ -11,9 +12,8 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Local imports - after path setup
-# ruff: noqa: E402
-from game_engine import GameEngine  # noqa: E402
-from map_generator import MapGenerator  # noqa: E402
+from game_engine import GameEngine
+from map_generator import MapGenerator
 
 
 def run_simulation(num_turns: int = 10, use_custom_map: bool = False):

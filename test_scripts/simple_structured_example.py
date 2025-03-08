@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
 """
 Simple example demonstrating structured output with Pydantic models.
 This example doesn't require game state and is easier to understand.
@@ -11,10 +12,9 @@ from typing import List, Optional
 # Add the repo root to the path to allow importing modules from the parent directory
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Local imports - after path setup
-# ruff: noqa: E402
-from llm_utils import Messages, call_openrouter  # noqa: E402
-from pydantic import BaseModel, Field  # noqa: E402
+# Third-party and local imports
+from pydantic import BaseModel, Field
+from llm_utils import Messages, call_openrouter
 
 
 class AnimalFact(BaseModel):
