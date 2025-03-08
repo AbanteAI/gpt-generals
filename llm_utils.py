@@ -1,9 +1,10 @@
 import json
 import os
-from typing import Dict, List, Optional, Type, TypeVar, Union
+from typing import Any, Dict, List, Optional, Type, TypeVar, Union, cast
 
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
+from openai.types.chat.chat_completion_message_tool_call import ChatCompletionMessageToolCall
 from pydantic import BaseModel
 
 
@@ -96,18 +97,26 @@ def call_openrouter(
             extra_headers=extra_headers,
             model=model,
             messages=openai_messages,
-            functions=functions,
-            function_call={"name": function_name},
+            tools=cast(Any, functions),  # Tools is the new way to specify functions
+            tool_choice={"type": "function", "function": {"name": function_name}},
         )
 
         # Extract and parse the function call arguments
-        function_call = completion.choices[0].message.function_call
-        if not function_call or not function_call.arguments:
-            raise ValueError("No function call arguments in response")
+        tool_calls = completion.choices[0].message.tool_calls
+        if not tool_calls or len(tool_calls) == 0:
+            # Fall back to function_call for compatibility
+            function_call = completion.choices[0].message.function_call
+            if not function_call or not function_call.arguments:
+                raise ValueError("No function or tool call in response")
+            function_args = function_call.arguments
+        else:
+            # Use the new tool_calls format
+            tool_call = cast(ChatCompletionMessageToolCall, tool_calls[0])
+            function_args = tool_call.function.arguments
 
         # Parse the JSON arguments and convert to the Pydantic model
         try:
-            args_dict = json.loads(function_call.arguments)
+            args_dict = json.loads(function_args)
             return response_model.model_validate(args_dict)
         except Exception as e:
             raise ValueError(f"Failed to parse structured output: {e}") from e

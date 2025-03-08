@@ -5,7 +5,7 @@ This example doesn't require game state and is easier to understand.
 """
 
 import sys
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -38,7 +38,7 @@ class AnimalInfo(BaseModel):
     )
 
 
-def get_animal_info(animal_name: str) -> AnimalInfo:
+def get_animal_info(animal_name: str) -> Optional[AnimalInfo]:
     """
     Get structured information about an animal using an LLM.
 
@@ -46,7 +46,7 @@ def get_animal_info(animal_name: str) -> AnimalInfo:
         animal_name: Name of the animal to get information about
 
     Returns:
-        AnimalInfo: Structured information about the animal
+        AnimalInfo or None if there was an error
     """
     messages = Messages()
 
@@ -64,7 +64,8 @@ def get_animal_info(animal_name: str) -> AnimalInfo:
             response_model=AnimalInfo,
         )
 
-        return animal_info
+        # Since we specified the response_model, we know this is an AnimalInfo object
+        return animal_info  # type: ignore
     except Exception as e:
         print(f"Error getting structured animal information: {e}")
         return None
@@ -83,7 +84,7 @@ def main():
     # Get structured animal information
     animal_info = get_animal_info(animal_name)
 
-    if animal_info:
+    if animal_info is not None and isinstance(animal_info, AnimalInfo):
         print("\n=== Structured Animal Information ===")
         print(f"Species: {animal_info.species}")
         print(f"Scientific Name: {animal_info.scientific_name}")

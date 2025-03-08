@@ -4,7 +4,7 @@ Test script for demonstrating structured output with Pydantic models.
 """
 
 import sys
-from typing import Dict, List
+from typing import Dict, List, Optional, Union, cast
 
 from pydantic import BaseModel, Field
 
@@ -78,7 +78,7 @@ Turn: {game.current_turn}
     return state_description, coin_distances
 
 
-def get_structured_game_analysis(game):
+def get_structured_game_analysis(game) -> Optional[GameAnalysis]:
     """
     Get a structured analysis of the current game state using the LLM.
 
@@ -86,7 +86,7 @@ def get_structured_game_analysis(game):
         game: GameEngine instance with the current game state
 
     Returns:
-        GameAnalysis: Structured game analysis
+        GameAnalysis or None if there was an error
     """
     state_description, coin_distances = get_game_state_description(game)
 
@@ -110,7 +110,8 @@ def get_structured_game_analysis(game):
             response_model=GameAnalysis,
         )
 
-        return analysis
+        # Since we specified the response_model, we know this is a GameAnalysis object
+        return cast(GameAnalysis, analysis)
     except Exception as e:
         print(f"Error getting structured analysis: {e}")
         return None
@@ -131,7 +132,7 @@ def main():
     # Get structured analysis
     analysis = get_structured_game_analysis(game)
 
-    if analysis:
+    if analysis is not None and isinstance(analysis, GameAnalysis):
         print("\n=== Structured Analysis Results ===")
         print(f"Situation Assessment: {analysis.situation_assessment}")
 
