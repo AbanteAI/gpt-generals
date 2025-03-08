@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# ruff: noqa: E402
 """
 Simulation script for the GPT Generals game with random movements.
 """
@@ -11,7 +10,8 @@ import sys
 # Add the repo root to the path to allow importing modules from the parent directory
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Local imports - after path setup
+# Local imports (must be after sys.path modification)
+# ruff: noqa: E402
 from game_engine import GameEngine
 from map_generator import MapGenerator
 

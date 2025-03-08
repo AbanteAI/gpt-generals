@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# ruff: noqa: E402
 """
 Test script for demonstrating structured output with Pydantic models.
 """
@@ -8,12 +7,14 @@ import os
 import sys
 from typing import Dict, List, Optional, cast
 
+# Third-party imports
 from pydantic import BaseModel, Field
 
 # Add the repo root to the path to allow importing modules from the parent directory
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Local imports - after path setup
+# Local imports (must be after sys.path modification)
+# ruff: noqa: E402
 from game_engine import GameEngine
 from llm_utils import Messages, call_openrouter
 from map_generator import MapGenerator
