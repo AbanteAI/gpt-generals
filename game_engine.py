@@ -1,6 +1,6 @@
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
 
 from map_generator import MapGenerator, TerrainType
 
@@ -21,12 +21,12 @@ class GameState:
 
 class GameEngine:
     def __init__(
-        self, 
+        self,
         map_grid: Optional[List[List[TerrainType]]] = None,
-        width: int = 10, 
-        height: int = 10, 
+        width: int = 10,
+        height: int = 10,
         water_probability: float = 0.2,
-        num_coins: int = 5
+        num_coins: int = 5,
     ):
         """
         Initialize the game engine with a map.
@@ -46,7 +46,7 @@ class GameEngine:
             self.map_grid = MapGenerator.generate_random_map(width, height, water_probability)
         else:
             self.map_grid = map_grid
-            
+
         # Get map dimensions
         self.height = len(self.map_grid)
         self.width = len(self.map_grid[0]) if self.height > 0 else 0
@@ -67,15 +67,15 @@ class GameEngine:
     def _place_units(self):
         """Place units A and B on random land positions."""
         excluded_positions = []
-        
+
         # Find positions for units
         unit_positions = MapGenerator.find_random_land_positions(
             self.map_grid, 2, excluded_positions
         )
-        
+
         if len(unit_positions) < 2:
             raise ValueError("Not enough land positions for units")
-            
+
         # Create units at these positions
         unit_names = ["A", "B"]
         for i, name in enumerate(unit_names):
@@ -86,12 +86,12 @@ class GameEngine:
         """Place a specified number of coins on random land positions."""
         # Exclude unit positions
         excluded_positions = [unit.position for unit in self.units.values()]
-        
+
         # Find positions for coins
         coin_positions = MapGenerator.find_random_land_positions(
             self.map_grid, num_coins, excluded_positions
         )
-        
+
         self.coin_positions = coin_positions
 
     def _save_state(self):
@@ -161,7 +161,7 @@ class GameEngine:
         """
         # Convert units to position dictionary for MapGenerator.render_map
         unit_positions = {unit.name: unit.position for unit in self.units.values()}
-        
+
         return MapGenerator.render_map(self.map_grid, unit_positions, self.coin_positions)
 
 

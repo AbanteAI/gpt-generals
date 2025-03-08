@@ -1,7 +1,6 @@
+import random
 from enum import Enum
 from typing import List, Optional, Tuple
-
-import random
 
 
 class TerrainType(Enum):
