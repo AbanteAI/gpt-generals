@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Any, Dict, List, Optional, Type, TypeVar, Union, cast
+from typing import Dict, List, Optional, Type, TypeVar, Union
 
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
@@ -78,7 +78,7 @@ def call_openrouter(
     if response_model:
         # Extract Pydantic schema for the function call
         schema = response_model.model_json_schema()
-        
+
         function_name = response_model.__name__
         functions = [
             {
@@ -90,7 +90,7 @@ def call_openrouter(
                 },
             }
         ]
-        
+
         # Make the API call with the function definition
         completion = client.chat.completions.create(
             extra_headers=extra_headers,
@@ -99,24 +99,24 @@ def call_openrouter(
             functions=functions,
             function_call={"name": function_name},
         )
-        
+
         # Extract and parse the function call arguments
         function_call = completion.choices[0].message.function_call
         if not function_call or not function_call.arguments:
             raise ValueError("No function call arguments in response")
-        
+
         # Parse the JSON arguments and convert to the Pydantic model
         try:
             args_dict = json.loads(function_call.arguments)
             return response_model.model_validate(args_dict)
         except Exception as e:
-            raise ValueError(f"Failed to parse structured output: {e}")
+            raise ValueError(f"Failed to parse structured output: {e}") from e
     else:
         # Standard non-structured response
         completion = client.chat.completions.create(
             extra_headers=extra_headers, model=model, messages=openai_messages
         )
-        
+
         content = completion.choices[0].message.content
         if content is None:
             raise ValueError("No content in response")

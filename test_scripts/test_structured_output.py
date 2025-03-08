@@ -5,14 +5,15 @@ Test script for demonstrating structured output with Pydantic models.
 
 import sys
 from typing import Dict, List
+
 from pydantic import BaseModel, Field
 
 # Add parent directory to path to import modules from root
 sys.path.append("..")
 
-from llm_utils import Messages, call_openrouter
-from map_generator import MapGenerator, TerrainType
 from game_engine import GameEngine
+from llm_utils import Messages, call_openrouter
+from map_generator import MapGenerator
 
 
 class Move(BaseModel):

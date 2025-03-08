@@ -6,6 +6,7 @@ This example doesn't require game state and is easier to understand.
 
 import sys
 from typing import List
+
 from pydantic import BaseModel, Field
 
 # Add parent directory to path to import modules from root
@@ -104,7 +105,8 @@ def main():
         if animal_info.lifespan_years > 40:
             print(f"The {animal_info.species} has a long lifespan of over 40 years!")
         else:
-            print(f"The {animal_info.species} has a lifespan of {animal_info.lifespan_years} years.")
+            years_str = f"{animal_info.lifespan_years}"
+            print(f"The {animal_info.species} has a lifespan of {years_str} years.")
     else:
         print("Failed to get structured information")
 
