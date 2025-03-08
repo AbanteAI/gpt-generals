@@ -137,10 +137,7 @@ class TestGameEngine(unittest.TestCase):
         game = GameEngine(map_grid=custom_map)
 
         # Position units and coins at known locations
-        game.units = {
-            "A": Unit(name="A", position=(1, 1)),
-            "B": Unit(name="B", position=(3, 3))
-        }
+        game.units = {"A": Unit(name="A", position=(1, 1)), "B": Unit(name="B", position=(3, 3))}
         game.coin_positions = [(2, 2), (4, 4)]
 
         # Render map

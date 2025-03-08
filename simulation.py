@@ -15,9 +15,7 @@ def run_simulation(num_turns: int = 10, use_custom_map: bool = False):
     # Create a game instance, optionally with a custom map
     if use_custom_map:
         # Generate a custom map with more land for better movement
-        custom_map = MapGenerator.generate_random_map(
-            width=15, height=10, water_probability=0.15
-        )
+        custom_map = MapGenerator.generate_random_map(width=15, height=10, water_probability=0.15)
         game = GameEngine(map_grid=custom_map, num_coins=8)
         print("Using custom generated map")
     else:
