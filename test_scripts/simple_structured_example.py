@@ -8,16 +8,12 @@ import os
 import sys
 from typing import List, Optional
 
+# ruff: noqa: E402
+# Add the repo root to the path to allow importing modules from the parent directory
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from llm_utils import Messages, call_openrouter  # noqa: E402
 from pydantic import BaseModel, Field
-
-# Add parent directory to path to import modules from root
-# This works both when run directly and when the script is in a subdirectory
-script_dir = os.path.dirname(os.path.abspath(__file__))
-repo_root = os.path.dirname(script_dir)
-sys.path.insert(0, repo_root)
-
-# Now we can import modules from the root directory
-from llm_utils import Messages, call_openrouter
 
 
 class AnimalFact(BaseModel):

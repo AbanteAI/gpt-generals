@@ -9,16 +9,13 @@ from typing import Dict, List, Optional, cast
 
 from pydantic import BaseModel, Field
 
-# Add parent directory to path to import modules from root
-# This works both when run directly and when the script is in a subdirectory
-script_dir = os.path.dirname(os.path.abspath(__file__))
-repo_root = os.path.dirname(script_dir)
-sys.path.insert(0, repo_root)
+# ruff: noqa: E402
+# Add the repo root to the path to allow importing modules from the parent directory
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Now we can import modules from the root directory
-from game_engine import GameEngine
-from llm_utils import Messages, call_openrouter
-from map_generator import MapGenerator
+from game_engine import GameEngine  # noqa: E402
+from llm_utils import Messages, call_openrouter  # noqa: E402
+from map_generator import MapGenerator  # noqa: E402
 
 
 class Move(BaseModel):

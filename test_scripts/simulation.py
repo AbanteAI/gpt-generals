@@ -7,15 +7,12 @@ import os
 import random
 import sys
 
-# Add parent directory to path to import modules from root
-# This works both when run directly and when the script is in a subdirectory
-script_dir = os.path.dirname(os.path.abspath(__file__))
-repo_root = os.path.dirname(script_dir)
-sys.path.insert(0, repo_root)
+# ruff: noqa: E402
+# Add the repo root to the path to allow importing modules from the parent directory
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Now we can import modules from the root directory
-from game_engine import GameEngine
-from map_generator import MapGenerator
+from game_engine import GameEngine  # noqa: E402
+from map_generator import MapGenerator  # noqa: E402
 
 
 def run_simulation(num_turns: int = 10, use_custom_map: bool = False):
