@@ -4,14 +4,19 @@ Simple example demonstrating structured output with Pydantic models.
 This example doesn't require game state and is easier to understand.
 """
 
+import os
 import sys
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
 # Add parent directory to path to import modules from root
-sys.path.append("..")
+# This works both when run directly and when the script is in a subdirectory
+script_dir = os.path.dirname(os.path.abspath(__file__))
+repo_root = os.path.dirname(script_dir)
+sys.path.insert(0, repo_root)
 
+# Now we can import modules from the root directory
 from llm_utils import Messages, call_openrouter
 
 

@@ -3,14 +3,19 @@
 Test script for demonstrating structured output with Pydantic models.
 """
 
+import os
 import sys
 from typing import Dict, List, Optional, cast
 
 from pydantic import BaseModel, Field
 
 # Add parent directory to path to import modules from root
-sys.path.append("..")
+# This works both when run directly and when the script is in a subdirectory
+script_dir = os.path.dirname(os.path.abspath(__file__))
+repo_root = os.path.dirname(script_dir)
+sys.path.insert(0, repo_root)
 
+# Now we can import modules from the root directory
 from game_engine import GameEngine
 from llm_utils import Messages, call_openrouter
 from map_generator import MapGenerator

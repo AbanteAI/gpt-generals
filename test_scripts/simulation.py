@@ -1,5 +1,19 @@
-import random
+#!/usr/bin/env python3
+"""
+Simulation script for the GPT Generals game with random movements.
+"""
 
+import os
+import random
+import sys
+
+# Add parent directory to path to import modules from root
+# This works both when run directly and when the script is in a subdirectory
+script_dir = os.path.dirname(os.path.abspath(__file__))
+repo_root = os.path.dirname(script_dir)
+sys.path.insert(0, repo_root)
+
+# Now we can import modules from the root directory
 from game_engine import GameEngine
 from map_generator import MapGenerator
 
