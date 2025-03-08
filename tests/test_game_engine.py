@@ -39,14 +39,14 @@ class TestGameEngine(unittest.TestCase):
         """Test that the game can initialize with a custom map."""
         # Create a custom map (all land)
         custom_map = MapGenerator.generate_empty_map(5, 5)
-        
+
         # Create a game with the custom map
         game = GameEngine(map_grid=custom_map)
-        
+
         # Check map dimensions match the custom map
         self.assertEqual(len(game.map_grid), 5)  # height
         self.assertEqual(len(game.map_grid[0]), 5)  # width
-        
+
         # Check all terrain is land
         for row in game.map_grid:
             for cell in row:
@@ -75,7 +75,7 @@ class TestGameEngine(unittest.TestCase):
         # Create a custom map with water at specific positions
         custom_map = MapGenerator.generate_empty_map(5, 5)
         custom_map[0][1] = TerrainType.WATER  # Water at (1,0)
-        
+
         game = GameEngine(map_grid=custom_map)
 
         # Clear existing units and place unit at edge of map
@@ -133,7 +133,7 @@ class TestGameEngine(unittest.TestCase):
         """Test that the map renders correctly."""
         custom_map = MapGenerator.generate_empty_map(5, 5)
         custom_map[0][0] = TerrainType.WATER  # Water at (0,0)
-        
+
         game = GameEngine(map_grid=custom_map)
 
         # Position units and coins at known locations

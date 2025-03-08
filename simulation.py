@@ -52,6 +52,6 @@ def run_simulation(num_turns: int = 10, use_custom_map: bool = False):
 if __name__ == "__main__":
     # Run a simulation with default settings
     run_simulation()
-    
+
     # Uncomment to run with a custom map
     # run_simulation(use_custom_map=True)

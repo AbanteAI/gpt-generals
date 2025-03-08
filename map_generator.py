@@ -1,6 +1,7 @@
-import random
 from enum import Enum
-from typing import List, Tuple, Optional
+from typing import List, Optional, Tuple
+
+import random
 
 
 class TerrainType(Enum):
@@ -53,9 +54,9 @@ class MapGenerator:
 
     @staticmethod
     def find_random_land_positions(
-        map_grid: List[List[TerrainType]], 
-        count: int = 1, 
-        excluded_positions: Optional[List[Tuple[int, int]]] = None
+        map_grid: List[List[TerrainType]],
+        count: int = 1,
+        excluded_positions: Optional[List[Tuple[int, int]]] = None,
     ) -> List[Tuple[int, int]]:
         """
         Find random positions on land that are not in the excluded list.
@@ -73,26 +74,26 @@ class MapGenerator:
 
         width = len(map_grid[0])
         height = len(map_grid)
-        
+
         # Get all available land positions
         all_land_positions = []
         for y in range(height):
             for x in range(width):
                 if map_grid[y][x] == TerrainType.LAND and (x, y) not in excluded_positions:
                     all_land_positions.append((x, y))
-        
+
         # Make sure we have enough land positions
         if len(all_land_positions) < count:
             return all_land_positions
-        
+
         # Randomly select 'count' positions
         return random.sample(all_land_positions, count)
 
     @staticmethod
     def render_map(
-        map_grid: List[List[TerrainType]], 
-        unit_positions: Optional[dict] = None, 
-        coin_positions: Optional[List[Tuple[int, int]]] = None
+        map_grid: List[List[TerrainType]],
+        unit_positions: Optional[dict] = None,
+        coin_positions: Optional[List[Tuple[int, int]]] = None,
     ) -> str:
         """
         Render a map as a string with optional units and coins.
@@ -109,7 +110,7 @@ class MapGenerator:
             unit_positions = {}
         if coin_positions is None:
             coin_positions = []
-            
+
         width = len(map_grid[0])
         height = len(map_grid)
         result = []
@@ -146,15 +147,15 @@ if __name__ == "__main__":
     # Example usage
     map_grid = MapGenerator.generate_random_map(10, 10, 0.3)
     land_positions = MapGenerator.find_random_land_positions(map_grid, 2)
-    
+
     # Create units at land positions
     units = {"A": land_positions[0], "B": land_positions[1]}
-    
+
     # Create coins
     coin_positions = MapGenerator.find_random_land_positions(
         map_grid, 5, excluded_positions=list(units.values())
     )
-    
+
     # Render the map
     rendered_map = MapGenerator.render_map(map_grid, units, coin_positions)
     print("Example map:")
