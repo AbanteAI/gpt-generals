@@ -38,23 +38,23 @@ class AnimalInfo(BaseModel):
 def get_animal_info(animal_name: str) -> AnimalInfo:
     """
     Get structured information about an animal using an LLM.
-    
+
     Args:
         animal_name: Name of the animal to get information about
-        
+
     Returns:
         AnimalInfo: Structured information about the animal
     """
     messages = Messages()
-    
+
     messages.add_system_message(
         "You are a wildlife expert that provides accurate information about animals."
     )
-    
+
     messages.add_user_message(
         f"Please provide detailed information about the {animal_name}."
     )
-    
+
     try:
         # Call the API with structured output using our AnimalInfo model
         animal_info = call_openrouter(
@@ -62,7 +62,7 @@ def get_animal_info(animal_name: str) -> AnimalInfo:
             model="openai/gpt-4o-mini",  # You can change the model as needed
             response_model=AnimalInfo,
         )
-        
+
         return animal_info
     except Exception as e:
         print(f"Error getting structured animal information: {e}")
@@ -72,16 +72,16 @@ def get_animal_info(animal_name: str) -> AnimalInfo:
 def main():
     """Run the simple structured output test."""
     print("Simple Structured Output Example\n")
-    
+
     # Get animal name from command line or use default
     animal_name = sys.argv[1] if len(sys.argv) > 1 else "African Elephant"
-    
+
     print(f"Getting information about: {animal_name}")
     print("Fetching data from LLM with structured output...")
-    
+
     # Get structured animal information
     animal_info = get_animal_info(animal_name)
-    
+
     if animal_info:
         print("\n=== Structured Animal Information ===")
         print(f"Species: {animal_info.species}")
@@ -89,16 +89,16 @@ def main():
         print(f"Diet: {animal_info.diet}")
         print(f"Lifespan: {animal_info.lifespan_years} years")
         print(f"Endangered Status: {animal_info.endangered_status}")
-        
+
         print("\nHabitats:")
         for habitat in animal_info.habitat:
             print(f"  • {habitat}")
-        
+
         print("\nInteresting Facts:")
         for i, fact in enumerate(animal_info.interesting_facts, 1):
             print(f"  {i}. {fact.fact}")
             print(f"     Source: {fact.source}")
-        
+
         # Demonstrate programmatic access to the structured data
         print("\nDemonstrating programmatic access:")
         if animal_info.lifespan_years > 40:

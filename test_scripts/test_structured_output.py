@@ -49,12 +49,12 @@ def calculate_manhattan_distance(pos1, pos2):
 def get_game_state_description(game):
     """Generate a text description of the current game state."""
     map_render = game.render_map()
-    
+
     # Get unit positions
     unit_positions = {}
     for name, unit in game.units.items():
         unit_positions[name] = unit.position
-    
+
     # Calculate distances to nearest coins
     coin_distances = {}
     for name, unit in game.units.items():
@@ -64,7 +64,7 @@ def get_game_state_description(game):
         ]
         nearest_distance = min(distances) if distances else -1
         coin_distances[name] = nearest_distance
-    
+
     # Create game state description
     state_description = f"""
 Current Game State:
@@ -77,33 +77,34 @@ Coins: {len(game.coin_positions)} remaining at {game.coin_positions}
 
 Turn: {game.current_turn}
     """
-    
+
     return state_description, coin_distances
 
 
 def get_structured_game_analysis(game):
     """
     Get a structured analysis of the current game state using the LLM.
-    
+
     Args:
         game: GameEngine instance with the current game state
-        
+
     Returns:
         GameAnalysis: Structured game analysis
     """
     state_description, coin_distances = get_game_state_description(game)
-    
+
     messages = Messages()
     messages.add_system_message(
         "You are a game AI analyst that provides strategic advice for the GPT Generals game. "
-        "The game is played on a grid where units can move in four directions (up, down, left, right). "
+        "The game is played on a grid where units can move in four directions "
+        "(up, down, left, right). "
         "Units collect coins on the map. Water tiles cannot be traversed."
     )
-    
+
     messages.add_user_message(
         f"Analyze this game state and provide strategic advice:\n\n{state_description}"
     )
-    
+
     try:
         # Call the API with structured output using our GameAnalysis model
         analysis = call_openrouter(
@@ -111,7 +112,7 @@ def get_structured_game_analysis(game):
             model="openai/gpt-4o-mini",  # You can change the model as needed
             response_model=GameAnalysis,
         )
-        
+
         return analysis
     except Exception as e:
         print(f"Error getting structured analysis: {e}")
@@ -121,32 +122,32 @@ def get_structured_game_analysis(game):
 def main():
     """Run the structured output test."""
     print("Testing structured output with Pydantic models\n")
-    
+
     # Create a game instance with a custom map for better demonstration
     custom_map = MapGenerator.generate_random_map(width=8, height=6, water_probability=0.2)
     game = GameEngine(map_grid=custom_map, num_coins=4)
-    
+
     print("Game State:")
     print(game.render_map())
     print("\nGetting structured analysis from LLM...")
-    
+
     # Get structured analysis
     analysis = get_structured_game_analysis(game)
-    
+
     if analysis:
         print("\n=== Structured Analysis Results ===")
         print(f"Situation Assessment: {analysis.situation_assessment}")
-        
+
         print("\nRecommended Moves:")
         for move in analysis.recommended_moves:
             print(f"  • {move.unit_name}: Move {move.direction} - {move.reason}")
-        
+
         print("\nCoin Proximity:")
         for unit, distance in analysis.coin_proximity.items():
             print(f"  • {unit}: {distance} steps from nearest coin")
-        
+
         print(f"\nWinning Probability: {analysis.winning_probability:.2f}")
-        
+
         # Show that we can access the fields programmatically
         print("\nAccessing fields programmatically:")
         # Sort moves by unit name
