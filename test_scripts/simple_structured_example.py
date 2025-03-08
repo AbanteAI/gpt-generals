@@ -17,12 +17,14 @@ from llm_utils import Messages, call_openrouter
 
 class AnimalFact(BaseModel):
     """Model representing a fact about an animal."""
+
     fact: str = Field(..., description="An interesting fact about the animal")
     source: str = Field(..., description="Source or reason for knowing this fact")
 
 
 class AnimalInfo(BaseModel):
     """Model for structured animal information."""
+
     species: str = Field(..., description="The species of the animal")
     scientific_name: str = Field(..., description="Scientific name (Latin name) of the animal")
     habitat: List[str] = Field(..., description="List of habitats where this animal can be found")
@@ -52,9 +54,7 @@ def get_animal_info(animal_name: str) -> AnimalInfo:
         "You are a wildlife expert that provides accurate information about animals."
     )
 
-    messages.add_user_message(
-        f"Please provide detailed information about the {animal_name}."
-    )
+    messages.add_user_message(f"Please provide detailed information about the {animal_name}.")
 
     try:
         # Call the API with structured output using our AnimalInfo model

@@ -18,6 +18,7 @@ from map_generator import MapGenerator
 
 class Move(BaseModel):
     """Model representing a move recommendation for a unit."""
+
     unit_name: str = Field(..., description="Name of the unit to move")
     direction: str = Field(..., description="Direction to move: 'up', 'down', 'left', or 'right'")
     reason: str = Field(..., description="Reasoning behind this move recommendation")
@@ -25,15 +26,10 @@ class Move(BaseModel):
 
 class GameAnalysis(BaseModel):
     """Model for structured game analysis output."""
-    situation_assessment: str = Field(
-        ..., description="Assessment of the current game situation"
-    )
-    recommended_moves: List[Move] = Field(
-        ..., description="List of recommended moves for units"
-    )
-    coin_proximity: Dict[str, int] = Field(
-        ..., description="Distance of each unit to nearest coin"
-    )
+
+    situation_assessment: str = Field(..., description="Assessment of the current game situation")
+    recommended_moves: List[Move] = Field(..., description="List of recommended moves for units")
+    coin_proximity: Dict[str, int] = Field(..., description="Distance of each unit to nearest coin")
     winning_probability: float = Field(
         ...,
         description="Estimated probability of winning from this position (0.0 to 1.0)",
@@ -72,7 +68,7 @@ Current Game State:
 {map_render}
 
 Unit Positions:
-{', '.join([f"{name} at {pos}" for name, pos in unit_positions.items()])}
+{", ".join([f"{name} at {pos}" for name, pos in unit_positions.items()])}
 
 Coins: {len(game.coin_positions)} remaining at {game.coin_positions}
 
