@@ -13,8 +13,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Local imports - after path setup
 # ruff: noqa: E402
-from pydantic import BaseModel, Field  # noqa: E402
 from llm_utils import Messages, call_openrouter  # noqa: E402
+from pydantic import BaseModel, Field  # noqa: E402
 
 
 class AnimalFact(BaseModel):
