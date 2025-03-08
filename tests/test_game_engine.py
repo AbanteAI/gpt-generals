@@ -10,8 +10,8 @@ class TestGameEngine(unittest.TestCase):
         game = GameEngine()
 
         # Check map dimensions
-        self.assertEqual(len(game.map_grid), 20)  # height
-        self.assertEqual(len(game.map_grid[0]), 20)  # width
+        self.assertEqual(len(game.map_grid), 10)  # height
+        self.assertEqual(len(game.map_grid[0]), 10)  # width
 
         # Check units
         self.assertEqual(len(game.units), 2)
@@ -102,8 +102,7 @@ class TestGameEngine(unittest.TestCase):
 
         # Check that unit positions are different in history
         self.assertNotEqual(
-            game.history[0].units["A"].position,
-            game.history[1].units["A"].position
+            game.history[0].units["A"].position, game.history[1].units["A"].position
         )
 
     def test_map_rendering(self):
@@ -137,8 +136,8 @@ class TestGameEngine(unittest.TestCase):
         self.assertEqual(rendered_map[4][5], "B")  # Unit B at (3,3)
 
         # Check coins
-        self.assertEqual(rendered_map[3][4], "C")  # Coin at (2,2)
-        self.assertEqual(rendered_map[5][6], "C")  # Coin at (4,4)
+        self.assertEqual(rendered_map[3][4], "c")  # Coin at (2,2)
+        self.assertEqual(rendered_map[5][6], "c")  # Coin at (4,4)
 
 
 if __name__ == "__main__":

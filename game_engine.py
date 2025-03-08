@@ -25,13 +25,13 @@ class GameState:
 
 
 class GameEngine:
-    def __init__(self, width: int = 20, height: int = 20, water_probability: float = 0.2):
+    def __init__(self, width: int = 10, height: int = 10, water_probability: float = 0.2):
         """
         Initialize the game engine with a map of specified dimensions.
 
         Args:
-            width: Width of the map grid (default 20)
-            height: Height of the map grid (default 20)
+            width: Width of the map grid (default 10)
+            height: Height of the map grid (default 10)
             water_probability: Probability of a cell being water (default 0.2)
         """
         self.width = width
@@ -61,8 +61,9 @@ class GameEngine:
         for _y in range(self.height):
             row = []
             for _x in range(self.width):
-                terrain = (TerrainType.WATER if random.random() < water_probability
-                          else TerrainType.LAND)
+                terrain = (
+                    TerrainType.WATER if random.random() < water_probability else TerrainType.LAND
+                )
                 row.append(terrain)
             map_grid.append(row)
         return map_grid
@@ -74,9 +75,11 @@ class GameEngine:
             y = random.randint(0, self.height - 1)
 
             # Check if position is land and not occupied
-            if (self.map_grid[y][x] == TerrainType.LAND and
-                    (x, y) not in [unit.position for unit in self.units.values()] and
-                    (x, y) not in self.coin_positions):
+            if (
+                self.map_grid[y][x] == TerrainType.LAND
+                and (x, y) not in [unit.position for unit in self.units.values()]
+                and (x, y) not in self.coin_positions
+            ):
                 return (x, y)
 
     def _place_units(self):
@@ -97,7 +100,7 @@ class GameEngine:
             map_grid=deepcopy(self.map_grid),
             units={name: deepcopy(unit) for name, unit in self.units.items()},
             coin_positions=self.coin_positions.copy(),
-            turn=self.current_turn
+            turn=self.current_turn,
         )
         self.history.append(state)
 
@@ -177,7 +180,7 @@ class GameEngine:
                 if unit_at_pos:
                     row += unit_at_pos.name
                 elif (x, y) in self.coin_positions:
-                    row += "C"
+                    row += "c"
                 else:
                     row += self.map_grid[y][x].value
 
