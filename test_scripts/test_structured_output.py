@@ -4,7 +4,7 @@ Test script for demonstrating structured output with Pydantic models.
 """
 
 import sys
-from typing import Dict, List, Optional, Union, cast
+from typing import Dict, List, Optional, cast
 
 from pydantic import BaseModel, Field
 
