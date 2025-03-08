@@ -16,19 +16,19 @@ game_state = {
 def update_grid():
     # Clear grid
     grid = [[" " for _ in range(20)] for _ in range(20)]
-    
+
     # Place units
     for unit_id, unit_data in game_state["units"].items():
         x, y = unit_data["x"], unit_data["y"]
         if 0 <= x < 20 and 0 <= y < 20:
             grid[y][x] = unit_id
-    
+
     # Place resources
     for resource in game_state.get("resources", []):
         x, y = resource["x"], resource["y"]
         if 0 <= x < 20 and 0 <= y < 20:
             grid[y][x] = resource["type"]
-    
+
     game_state["grid"] = grid
     return grid
 
@@ -47,7 +47,7 @@ def handle_command(command):
     # Process command (in the future this will interact with the game engine)
     # For now, just echo it back to the chat
     emit('chat_message', {'message': f'You: {command}'})
-    
+
     # Example of moving unit A left (for testing)
     if command.lower() == "alpha, move left" or command.lower() == "a, move left":
         game_state["units"]["A"]["x"] = max(0, game_state["units"]["A"]["x"] - 1)
