@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPT Generals</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>GPT Generals</h1>
+        <div class="game-container">
+            <div class="grid-container">
+                <pre id="grid"></pre>
+            </div>
+            <div class="chat-container">
+                <div id="chat" class="chat-log"></div>
+                <div class="input-container">
+                    <input type="text" id="command" placeholder="Enter command...">
+                    <button id="send-btn">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
