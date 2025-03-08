@@ -7,10 +7,11 @@ import os
 import random
 import sys
 
-# ruff: noqa: E402
 # Add the repo root to the path to allow importing modules from the parent directory
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Local imports - after path setup
+# ruff: noqa: E402
 from game_engine import GameEngine  # noqa: E402
 from map_generator import MapGenerator  # noqa: E402
 

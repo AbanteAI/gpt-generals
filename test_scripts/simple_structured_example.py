@@ -8,12 +8,13 @@ import os
 import sys
 from typing import List, Optional
 
-# ruff: noqa: E402
 # Add the repo root to the path to allow importing modules from the parent directory
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Local imports - after path setup
+# ruff: noqa: E402
+from pydantic import BaseModel, Field  # noqa: E402
 from llm_utils import Messages, call_openrouter  # noqa: E402
-from pydantic import BaseModel, Field
 
 
 class AnimalFact(BaseModel):
