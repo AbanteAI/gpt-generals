@@ -1,12 +1,36 @@
 import os
-from typing import Optional
+from typing import Dict, List, Optional
 
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
 
 
+class Messages:
+    """A simple class to manage messages for LLM conversations."""
+
+    def __init__(self):
+        """Initialize an empty message list."""
+        self.messages: List[Dict[str, str]] = []
+
+    def add_user_message(self, content: str) -> None:
+        """Add a user message to the list."""
+        self.messages.append({"role": "user", "content": content})
+
+    def add_assistant_message(self, content: str) -> None:
+        """Add an assistant message to the list."""
+        self.messages.append({"role": "assistant", "content": content})
+
+    def add_system_message(self, content: str) -> None:
+        """Add a system message to the list."""
+        self.messages.append({"role": "system", "content": content})
+
+    def to_openai_messages(self) -> List[ChatCompletionMessageParam]:
+        """Convert the messages to the format required by the OpenAI API."""
+        return self.messages  # type: ignore
+
+
 def call_openrouter(
-    messages: list[ChatCompletionMessageParam],
+    messages: Messages,
     model: str = "openai/gpt-4o-mini",
     site_url: Optional[str] = None,
     site_name: Optional[str] = None,
@@ -15,7 +39,7 @@ def call_openrouter(
     Make an API call to OpenRouter.
 
     Args:
-        messages: List of message dictionaries with 'role' and 'content'
+        messages: Instance of Messages class with conversation history
         model: Model to use (defaults to gpt-4o-mini)
         site_url: Optional site URL for OpenRouter rankings
         site_name: Optional site name for OpenRouter rankings
@@ -41,8 +65,10 @@ def call_openrouter(
     if site_name:
         extra_headers["X-Title"] = site_name
 
+    openai_messages = messages.to_openai_messages()
+
     completion = client.chat.completions.create(
-        extra_headers=extra_headers, model=model, messages=messages
+        extra_headers=extra_headers, model=model, messages=openai_messages
     )
 
     content = completion.choices[0].message.content
@@ -52,10 +78,9 @@ def call_openrouter(
 
 
 if __name__ == "__main__":
-    # Test the function
-    test_messages: list[ChatCompletionMessageParam] = [
-        {"role": "user", "content": "What is the meaning of life?"}
-    ]
+    # Test the function using the new Messages class
+    test_messages = Messages()
+    test_messages.add_user_message("What is the meaning of life?")
 
     try:
         response = call_openrouter(test_messages)
