@@ -1,6 +1,7 @@
 import unittest
 
-from game_engine import GameEngine, TerrainType
+from game_engine import GameEngine, Unit
+from map_generator import MapGenerator, TerrainType
 
 
 class TestGameEngine(unittest.TestCase):
@@ -34,10 +35,28 @@ class TestGameEngine(unittest.TestCase):
         self.assertEqual(game.current_turn, 0)
         self.assertEqual(len(game.history), 1)  # Initial state should be saved
 
+    def test_game_initialization_with_custom_map(self):
+        """Test that the game can initialize with a custom map."""
+        # Create a custom map (all land)
+        custom_map = MapGenerator.generate_empty_map(5, 5)
+
+        # Create a game with the custom map
+        game = GameEngine(map_grid=custom_map)
+
+        # Check map dimensions match the custom map
+        self.assertEqual(len(game.map_grid), 5)  # height
+        self.assertEqual(len(game.map_grid[0]), 5)  # width
+
+        # Check all terrain is land
+        for row in game.map_grid:
+            for cell in row:
+                self.assertEqual(cell, TerrainType.LAND)
+
     def test_unit_movement(self):
         """Test that units can move correctly on the map."""
         # Create a game with a controlled map for predictable testing
-        game = GameEngine(width=5, height=5, water_probability=0)  # All land
+        custom_map = MapGenerator.generate_empty_map(5, 5)
+        game = GameEngine(map_grid=custom_map)
 
         # Force unit positions for testing
         game.units["A"].position = (2, 2)  # Center
@@ -53,10 +72,14 @@ class TestGameEngine(unittest.TestCase):
 
     def test_invalid_movement(self):
         """Test that units cannot move into invalid positions."""
-        game = GameEngine(width=5, height=5)
+        # Create a custom map with water at specific positions
+        custom_map = MapGenerator.generate_empty_map(5, 5)
+        custom_map[0][1] = TerrainType.WATER  # Water at (1,0)
 
-        # Place unit at edge of map
-        game.units["A"].position = (0, 0)
+        game = GameEngine(map_grid=custom_map)
+
+        # Clear existing units and place unit at edge of map
+        game.units = {"A": Unit(name="A", position=(0, 0))}
 
         # Try to move left and up (out of bounds)
         self.assertFalse(game.move_unit("A", "left"))
@@ -65,14 +88,14 @@ class TestGameEngine(unittest.TestCase):
         # Position should remain unchanged
         self.assertEqual(game.units["A"].position, (0, 0))
 
-        # Create water at (1, 0) and try to move right into water
-        game.map_grid[0][1] = TerrainType.WATER
+        # Try to move right into water
         self.assertFalse(game.move_unit("A", "right"))
         self.assertEqual(game.units["A"].position, (0, 0))
 
     def test_coin_collection(self):
         """Test that units can collect coins."""
-        game = GameEngine(width=5, height=5, water_probability=0)
+        custom_map = MapGenerator.generate_empty_map(5, 5)
+        game = GameEngine(map_grid=custom_map)
 
         # Clear existing coins and place one at a known location
         game.coin_positions = [(3, 3)]
@@ -88,7 +111,8 @@ class TestGameEngine(unittest.TestCase):
 
     def test_game_history(self):
         """Test that game history is correctly maintained."""
-        game = GameEngine(width=5, height=5)
+        custom_map = MapGenerator.generate_empty_map(5, 5)
+        game = GameEngine(map_grid=custom_map)
 
         # Make a move and advance turn
         game.move_unit("A", "right")
@@ -107,20 +131,14 @@ class TestGameEngine(unittest.TestCase):
 
     def test_map_rendering(self):
         """Test that the map renders correctly."""
-        game = GameEngine(width=5, height=5)
+        custom_map = MapGenerator.generate_empty_map(5, 5)
+        custom_map[0][0] = TerrainType.WATER  # Water at (0,0)
 
-        # Set controlled terrain for predictable testing
-        for y in range(5):
-            for x in range(5):
-                game.map_grid[y][x] = TerrainType.LAND
+        game = GameEngine(map_grid=custom_map)
 
         # Position units and coins at known locations
-        game.units["A"].position = (1, 1)
-        game.units["B"].position = (3, 3)
+        game.units = {"A": Unit(name="A", position=(1, 1)), "B": Unit(name="B", position=(3, 3))}
         game.coin_positions = [(2, 2), (4, 4)]
-
-        # Create a water tile
-        game.map_grid[0][0] = TerrainType.WATER
 
         # Render map
         rendered_map = game.render_map().split("\n")

@@ -1,13 +1,8 @@
-import random
 from copy import deepcopy
 from dataclasses import dataclass
-from enum import Enum
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
-
-class TerrainType(Enum):
-    LAND = "."
-    WATER = "~"
+from map_generator import MapGenerator, TerrainType
 
 
 @dataclass
@@ -25,22 +20,36 @@ class GameState:
 
 
 class GameEngine:
-    def __init__(self, width: int = 10, height: int = 10, water_probability: float = 0.2):
+    def __init__(
+        self,
+        map_grid: Optional[List[List[TerrainType]]] = None,
+        width: int = 10,
+        height: int = 10,
+        water_probability: float = 0.2,
+        num_coins: int = 5,
+    ):
         """
-        Initialize the game engine with a map of specified dimensions.
+        Initialize the game engine with a map.
 
         Args:
-            width: Width of the map grid (default 10)
-            height: Height of the map grid (default 10)
-            water_probability: Probability of a cell being water (default 0.2)
+            map_grid: Pre-generated map grid (default None, will generate random map)
+            width: Width of the map grid if generating (default 10)
+            height: Height of the map grid if generating (default 10)
+            water_probability: Probability of water tiles if generating (default 0.2)
+            num_coins: Number of coins to place (default 5)
         """
-        self.width = width
-        self.height = height
         self.current_turn = 0
         self.history: List[GameState] = []
 
-        # Initialize the map with terrain
-        self.map_grid = self._generate_map(water_probability)
+        # Initialize the map - either use provided map or generate one
+        if map_grid is None:
+            self.map_grid = MapGenerator.generate_random_map(width, height, water_probability)
+        else:
+            self.map_grid = map_grid
+
+        # Get map dimensions
+        self.height = len(self.map_grid)
+        self.width = len(self.map_grid[0]) if self.height > 0 else 0
 
         # Initialize empty collections for units and coins
         self.units: Dict[str, Unit] = {}
@@ -50,49 +59,40 @@ class GameEngine:
         self._place_units()
 
         # Place coins at random land positions
-        self._place_coins(5)  # Place 5 coins
+        self._place_coins(num_coins)
 
         # Save initial state
         self._save_state()
 
-    def _generate_map(self, water_probability: float) -> List[List[TerrainType]]:
-        """Generate a random map with land and water."""
-        map_grid = []
-        for _y in range(self.height):
-            row = []
-            for _x in range(self.width):
-                terrain = (
-                    TerrainType.WATER if random.random() < water_probability else TerrainType.LAND
-                )
-                row.append(terrain)
-            map_grid.append(row)
-        return map_grid
-
-    def _get_random_land_position(self) -> Tuple[int, int]:
-        """Get a random position on land that's not occupied by units or coins."""
-        while True:
-            x = random.randint(0, self.width - 1)
-            y = random.randint(0, self.height - 1)
-
-            # Check if position is land and not occupied
-            if (
-                self.map_grid[y][x] == TerrainType.LAND
-                and (x, y) not in [unit.position for unit in self.units.values()]
-                and (x, y) not in self.coin_positions
-            ):
-                return (x, y)
-
     def _place_units(self):
         """Place units A and B on random land positions."""
-        for name in ["A", "B"]:
-            position = self._get_random_land_position()
-            self.units[name] = Unit(name=name, position=position)
+        excluded_positions = []
+
+        # Find positions for units
+        unit_positions = MapGenerator.find_random_land_positions(
+            self.map_grid, 2, excluded_positions
+        )
+
+        if len(unit_positions) < 2:
+            raise ValueError("Not enough land positions for units")
+
+        # Create units at these positions
+        unit_names = ["A", "B"]
+        for i, name in enumerate(unit_names):
+            self.units[name] = Unit(name=name, position=unit_positions[i])
+            excluded_positions.append(unit_positions[i])
 
     def _place_coins(self, num_coins: int):
         """Place a specified number of coins on random land positions."""
-        for _ in range(num_coins):
-            position = self._get_random_land_position()
-            self.coin_positions.append(position)
+        # Exclude unit positions
+        excluded_positions = [unit.position for unit in self.units.values()]
+
+        # Find positions for coins
+        coin_positions = MapGenerator.find_random_land_positions(
+            self.map_grid, num_coins, excluded_positions
+        )
+
+        self.coin_positions = coin_positions
 
     def _save_state(self):
         """Save the current game state to history."""
@@ -159,34 +159,10 @@ class GameEngine:
         Returns:
             A string representation of the map
         """
-        result = []
+        # Convert units to position dictionary for MapGenerator.render_map
+        unit_positions = {unit.name: unit.position for unit in self.units.values()}
 
-        # Add a header with column numbers
-        header = "  " + "".join(f"{i % 10}" for i in range(self.width))
-        result.append(header)
-
-        for y in range(self.height):
-            # Add row number at the beginning of each row
-            row = f"{y % 10} "
-
-            for x in range(self.width):
-                # Check if there's a unit at this position
-                unit_at_pos = None
-                for unit in self.units.values():
-                    if unit.position == (x, y):
-                        unit_at_pos = unit
-                        break
-
-                if unit_at_pos:
-                    row += unit_at_pos.name
-                elif (x, y) in self.coin_positions:
-                    row += "c"
-                else:
-                    row += self.map_grid[y][x].value
-
-            result.append(row)
-
-        return "\n".join(result)
+        return MapGenerator.render_map(self.map_grid, unit_positions, self.coin_positions)
 
 
 if __name__ == "__main__":
