@@ -94,7 +94,7 @@ def call_openrouter(
             # This ensures compatibility with OpenRouter and older OpenAI SDK versions
             schema = response_model.model_json_schema()
             function_name = response_model.__name__
-            
+
             # Make the API call with a function definition for structured output
             completion = client.chat.completions.create(
                 extra_headers=extra_headers,
@@ -107,12 +107,12 @@ def call_openrouter(
                 }],
                 function_call={"name": function_name},
             )
-            
+
             # Extract the function call arguments
             function_call = completion.choices[0].message.function_call
             if not function_call or not function_call.arguments:
-                raise ValueError("No function call in response")
-                
+                raise ValueError("No function call in response") from None
+
             # Parse the JSON arguments and convert to the Pydantic model
             try:
                 args_dict = json.loads(function_call.arguments)
