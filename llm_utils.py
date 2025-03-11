@@ -100,11 +100,13 @@ def call_openrouter(
                 extra_headers=extra_headers,
                 model=model,
                 messages=openai_messages,
-                functions=[{
-                    "name": function_name,
-                    "description": f"Output structured as {function_name}",
-                    "parameters": schema,
-                }],
+                functions=[
+                    {
+                        "name": function_name,
+                        "description": f"Output structured as {function_name}",
+                        "parameters": schema,
+                    }
+                ],
                 function_call={"name": function_name},
             )
 
