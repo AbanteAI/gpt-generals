@@ -2,10 +2,14 @@ import json
 import os
 from typing import Any, Dict, List, Optional, Type, TypeVar, Union, cast
 
+from dotenv import load_dotenv
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
 from openai.types.chat.chat_completion_message_tool_call import ChatCompletionMessageToolCall
 from pydantic import BaseModel
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 class Messages:

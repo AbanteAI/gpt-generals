@@ -161,4 +161,13 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except ValueError as e:
+        if "OPEN_ROUTER_KEY" in str(e):
+            print("\nError: OPEN_ROUTER_KEY not found!")
+            print("To use this script, create a .env file in the project root with:")
+            print("OPEN_ROUTER_KEY=your_api_key_here")
+            print("\nOr set the environment variable directly.")
+        else:
+            raise
