@@ -39,3 +39,8 @@ jobs:
       run: |
         . .venv/bin/activate
         pyright
+
+    - name: Run tests with pytest
+      run: |
+        . .venv/bin/activate
+        python -m pytest
