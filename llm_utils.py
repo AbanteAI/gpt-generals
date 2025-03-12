@@ -76,7 +76,7 @@ def call_openrouter(
         extra_headers["X-Title"] = site_name
 
     openai_messages = messages.to_openai_messages()
-    
+
     # Common parameters for API calls
     params = {
         "extra_headers": extra_headers,
