@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List, Optional, Type, TypeVar, Union, cast
+from typing import Dict, List, Optional, Type, TypeVar, Union
 
 from dotenv import load_dotenv
 from openai import OpenAI
