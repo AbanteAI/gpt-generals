@@ -9,7 +9,7 @@ from openai import OpenAI
 from pydantic import BaseModel, Field
 
 from game_engine import GameEngine
-from llm_utils import Messages
+from llm_utils import Messages, call_openrouter
 from map_generator import MapGenerator
 
 
@@ -20,7 +20,9 @@ class MoveDecision(BaseModel):
         ...,
         description="Direction to move: 'up', 'down', 'left', or 'right'",
         # Add validation to ensure direction is one of the allowed values
-        pattern="^(up|down|left|right)$",
+        pattern="
+^
+(up|down|left|right)$",
     )
     reasoning: str = Field(..., description="Reasoning behind this move decision")
 
@@ -28,6 +30,96 @@ class MoveDecision(BaseModel):
 def calculate_manhattan_distance(pos1: Tuple[int, int], pos2: Tuple[int, int]) -> int:
     """Calculate Manhattan distance between two positions."""
     return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
+
+
+def get_nearby_description(game: GameEngine, unit_name: str) -> str:
+    """Generate a natural language description of what's around a unit."""
+    unit = game.units[unit_name]
+    x, y = unit.position
+
+    # Define directions (up, down, left, right) and their offsets
+    directions = {
+        "north": (0, -1),  # Up (decreasing y)
+        "south": (0, 1),   # Down (increasing y)
+        "west": (-1, 0),   # Left (decreasing x)
+        "east": (1, 0),    # Right (increasing x)
+    }
+
+    # Get map dimensions for boundary checking
+    max_x = game.width - 1
+    max_y = game.height - 1
+
+    # Generate descriptions for each direction
+    nearby_descriptions = []
+    coin_directions = []
+
+    for direction_name, (dx, dy) in directions.items():
+        new_x, new_y = x + dx, y + dy
+
+        # Check if the position is within map boundaries
+        if 0 <= new_x <= max_x and 0 <= new_y <= max_y:
+            terrain = game.map_grid[new_y][new_x]
+            if terrain == TerrainType.WATER:
+                nearby_descriptions.append(f"There is water to the {direction_name}.")
+            else:  # It's land
+                nearby_descriptions.append(f"There is land to the {direction_name}.")
+
+                # Check if there's a unit at this position
+                unit_at_pos = None
+                for other_name, other_unit in game.units.items():
+                    if other_unit.position == (new_x, new_y):
+                        unit_at_pos = other_name
+                        break
+
+                if unit_at_pos:
+                    nearby_descriptions.append(
+                        f"Unit {unit_at_pos} is to the {direction_name}."
+                    )
+
+                # Check if there's a coin at this position
+                if (new_x, new_y) in game.coin_positions:
+                    coin_directions.append(direction_name)
+        else:
+            nearby_descriptions.append(f"You can't go {direction_name} (map edge).")
+
+    # Add coin information
+    if coin_directions:
+        if len(coin_directions) == 1:
+            nearby_descriptions.append(f"There is a coin to the {coin_directions[0]}!")
+        else:
+            coin_list = ", ".join(coin_directions[:-1]) + f" and {coin_directions[-1]}"
+            nearby_descriptions.append(f"There are coins to the {coin_list}!")
+
+    # Find nearest coins beyond adjacent cells
+    non_adjacent_coins = [
+        pos for pos in game.coin_positions
+        if abs(pos[0] - x) > 1 or abs(pos[1] - y) > 1
+    ]
+
+    if non_adjacent_coins:
+        # Find the nearest non-adjacent coin
+        distances = [(calculate_manhattan_distance((x, y), pos), pos) for pos in non_adjacent_coins]
+        min_distance, nearest_coin = min(distances)
+        coin_x, coin_y = nearest_coin
+
+        # Generate direction hint
+        direction_hint = []
+        if coin_y < y:
+            direction_hint.append("north")
+        elif coin_y > y:
+            direction_hint.append("south")
+
+        if coin_x < x:
+            direction_hint.append("west")
+        elif coin_x > x:
+            direction_hint.append("east")
+
+        direction_str = "-".join(direction_hint) if direction_hint else "unknown direction"
+        nearby_descriptions.append(
+            f"The nearest coin is {min_distance} steps away to the {direction_str}."
+        )
+
+    return "\n".join(nearby_descriptions)
 
 
 def get_game_state_description(game: GameEngine) -> str:
@@ -78,6 +170,7 @@ def get_unit_move_decision(game: GameEngine, unit_name: str) -> Optional[MoveDec
     """
     state_description = get_game_state_description(game)
     unit_position = game.units[unit_name].position
+    nearby_description = get_nearby_description(game, unit_name)
 
     messages = Messages()
     messages.add_system_message(
@@ -101,6 +194,7 @@ def get_unit_move_decision(game: GameEngine, unit_name: str) -> Optional[MoveDec
         f"You must respond with a JSON object containing two fields:\n"
         f"- direction: one of 'up', 'down', 'left', or 'right'\n"
         f"- reasoning: a brief explanation of why you chose this direction\n\n"
+        f"What's around you:\n{nearby_description}\n\n"
         f"Game State:\n{state_description}"
     )
 
