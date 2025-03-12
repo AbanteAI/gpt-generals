@@ -84,17 +84,21 @@ def call_openrouter(
         "messages": openai_messages,
     }
 
-    # Handle structured output if a response model is provided
+    # Add response_format parameter if a model is provided
     if response_model:
-        params["response_format"] = response_model
-        completion = client.beta.chat.completions.parse(**params)
-        return cast(T, completion.choices[0].message.parsed)
+        params["response_format"] = {"type": "json_object"}
+
+    # Always use the standard create method
+    completion = client.chat.completions.create(**params)
+    content = completion.choices[0].message.content
+
+    if content is None:
+        raise ValueError("No content in response")
+
+    # If a response model was provided, parse the content into the model
+    if response_model:
+        return response_model.model_validate_json(content)
     else:
-        # Standard non-structured response
-        completion = client.chat.completions.create(**params)
-        content = completion.choices[0].message.content
-        if content is None:
-            raise ValueError("No content in response")
         return content
 
 
