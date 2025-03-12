@@ -48,9 +48,9 @@ class PlayerController:
             
         # Check if direction is valid
         if direction_key not in self.direction_map:
-            print(f"Invalid direction. Please use w (up), a (left), s (down), d (right)")
+            print("Invalid direction. Please use w (up), a (left), s (down), d (right)")
             return False
-            
+        
         # Translate wasd to game directions
         direction = self.direction_map[direction_key]
         
@@ -59,5 +59,5 @@ class PlayerController:
         
         if not success:
             print(f"Move failed. Unit {unit_name} cannot move {direction}.")
-            
+        
         return success
