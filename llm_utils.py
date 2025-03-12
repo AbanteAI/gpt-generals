@@ -118,22 +118,24 @@ def call_openrouter(
 
         # Add special instructions for nested object arrays
         if nested_objects:
-            examples = "\n\nSpecial instructions for complex fields:\n"
+            examples = "\n\nIMPORTANT: Some fields require complex objects, not just simple values:\n"
             for field, props in nested_objects.items():
                 prop_names = list(props.keys())
-                examples += f"- '{field}' must be an array of objects with these properties:\n"
-                for prop in prop_names:
-                    examples += f"  * '{prop}': {props[prop].get('description', '')}\n"
+                examples += f"The field '{field}' MUST be an array of objects where each object has these EXACT properties:\n"
                 
-                # Add a concrete example with the correct format
-                examples += f"\nExample format for '{field}':\n"
-                examples += "[\n"
-                examples += "  {\n"
-                for prop in prop_names:
-                    examples += f"    \"{prop}\": \"Example {prop} value\",\n"
-                examples += "  },\n"
-                examples += "  {...additional objects...}\n"
-                examples += "]\n"
+                # Show required properties
+                example_obj = "{"
+                for i, prop in enumerate(prop_names):
+                    desc = props[prop].get('description', prop)
+                    examples += f"  - '{prop}': {desc}\n"
+                    example_obj += f'"{prop}": "value for {prop}"'
+                    if i < len(prop_names) - 1:
+                        example_obj += ", "
+                example_obj += "}"
+                
+                # Simplified example 
+                examples += f"\nExample for '{field}': [{example_obj}, {example_obj}]\n"
+                examples += f"DO NOT USE simple strings for items in the '{field}' array!\n\n"
 
         # Create a guidance message with schema information
         schema_msg = (
