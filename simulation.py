@@ -30,28 +30,30 @@ def calculate_manhattan_distance(pos1: Tuple[int, int], pos2: Tuple[int, int]) -
     return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
 
 
-def get_relative_direction(from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> Tuple[str, int, int]:
+def get_relative_direction(
+    from_pos: Tuple[int, int], to_pos: Tuple[int, int]
+) -> Tuple[str, int, int]:
     """
     Get the relative direction from one position to another.
-    
+
     Args:
         from_pos: Starting position (x, y)
         to_pos: Target position (x, y)
-        
+
     Returns:
         Tuple of (primary_direction, x_distance, y_distance)
         primary_direction is one of: "up", "down", "left", "right", or a combination like "up-left"
     """
     x_diff = to_pos[0] - from_pos[0]
     y_diff = to_pos[1] - from_pos[1]
-    
+
     x_distance = abs(x_diff)
     y_distance = abs(y_diff)
-    
+
     # Determine primary directions
     x_direction = "right" if x_diff > 0 else "left" if x_diff < 0 else ""
     y_direction = "down" if y_diff > 0 else "up" if y_diff < 0 else ""
-    
+
     # Combine directions
     if x_direction and y_direction:
         primary_direction = f"{y_direction}-{x_direction}"
@@ -59,34 +61,34 @@ def get_relative_direction(from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -
         primary_direction = x_direction
     else:
         primary_direction = y_direction
-    
+
     return primary_direction, x_distance, y_distance
 
 
 def get_unit_surroundings(game: GameEngine, unit_name: str) -> str:
     """
     Create a human-friendly description of what surrounds the unit.
-    
+
     Args:
         game: GameEngine instance with the current game state
         unit_name: Name of the unit to describe surroundings for
-        
+
     Returns:
         A string describing what's around the unit in intuitive terms
     """
     unit_position = game.units[unit_name].position
     surroundings = []
-    
+
     # Find nearby coins (all coins sorted by distance)
     nearby_coins = []
     for coin_pos in game.coin_positions:
         distance = calculate_manhattan_distance(unit_position, coin_pos)
         direction, x_dist, y_dist = get_relative_direction(unit_position, coin_pos)
         nearby_coins.append((coin_pos, distance, direction, x_dist, y_dist))
-    
+
     # Sort coins by distance
     nearby_coins.sort(key=lambda x: x[1])
-    
+
     # Describe coins
     if nearby_coins:
         # Describe closest coin with detailed directions
@@ -104,14 +106,16 @@ def get_unit_surroundings(game: GameEngine, unit_name: str) -> str:
                 f"{'left' if 'left' in direction else 'right' if 'right' in direction else ''}"
                 f")."
             )
-        
+
         # Mention other coins
         if len(nearby_coins) > 1:
             other_coins_text = []
             # Limit to 3 more coins
-            for _i, (_coin_pos, distance, direction, _x_dist, _y_dist) in enumerate(nearby_coins[1:4]):
+            for _i, (_coin_pos, distance, direction, _x_dist, _y_dist) in enumerate(
+                nearby_coins[1:4]
+            ):
                 other_coins_text.append(f"another coin {distance} steps away {direction}")
-            
+
             if other_coins_text:
                 more_coins = len(nearby_coins) - 4 if len(nearby_coins) > 4 else 0
                 coins_desc = ", ".join(other_coins_text)
@@ -120,11 +124,13 @@ def get_unit_surroundings(game: GameEngine, unit_name: str) -> str:
                 surroundings.append(f"There's also {coins_desc}.")
     else:
         surroundings.append("There are no coins on the map.")
-    
+
     # Find nearby water obstacles (within 3 steps)
     water_tiles = []
     for y in range(max(0, unit_position[1] - 3), min(len(game.map_grid), unit_position[1] + 4)):
-        x_range = range(max(0, unit_position[0] - 3), min(len(game.map_grid[0]), unit_position[0] + 4))
+        x_range = range(
+            max(0, unit_position[0] - 3), min(len(game.map_grid[0]), unit_position[0] + 4)
+        )
         for x in x_range:
             if game.map_grid[y][x] == TerrainType.WATER:
                 pos = (x, y)
@@ -132,19 +138,19 @@ def get_unit_surroundings(game: GameEngine, unit_name: str) -> str:
                 if distance <= 3:  # Only consider water within 3 steps
                     direction, x_dist, y_dist = get_relative_direction(unit_position, pos)
                     water_tiles.append((pos, distance, direction))
-    
+
     # Sort water by distance
     water_tiles.sort(key=lambda x: x[1])
-    
+
     # Describe water obstacles
     if water_tiles:
         water_directions = []
         for _pos, distance, direction in water_tiles[:3]:  # Limit to 3 water tiles
             water_directions.append(f"{direction} ({distance} step{'s' if distance > 1 else ''})")
-        
+
         water_desc = ", ".join(water_directions)
         surroundings.append(f"Watch out for water {water_desc}.")
-    
+
     # Find other units
     other_units = []
     for name, unit in game.units.items():
@@ -153,11 +159,11 @@ def get_unit_surroundings(game: GameEngine, unit_name: str) -> str:
             distance = calculate_manhattan_distance(unit_position, pos)
             direction, x_dist, y_dist = get_relative_direction(unit_position, pos)
             other_units.append((name, pos, distance, direction))
-    
+
     # Describe other units
     for name, _pos, distance, direction in other_units:
         surroundings.append(f"Unit {name} is {distance} steps away {direction}.")
-    
+
     # Check borders
     borders = []
     if unit_position[0] == 0:
@@ -168,11 +174,11 @@ def get_unit_surroundings(game: GameEngine, unit_name: str) -> str:
         borders.append("northern")
     if unit_position[1] == len(game.map_grid) - 1:
         borders.append("southern")
-    
+
     if borders:
         borders_text = " and ".join(borders)
         surroundings.append(f"You're at the {borders_text} edge of the map.")
-    
+
     return "\n".join(surroundings)
 
 
@@ -224,7 +230,7 @@ def get_unit_move_decision(game: GameEngine, unit_name: str) -> Optional[MoveDec
     """
     state_description = get_game_state_description(game)
     unit_position = game.units[unit_name].position
-    
+
     # Get intuitive description of the unit's surroundings
     surroundings_description = get_unit_surroundings(game, unit_name)
 
