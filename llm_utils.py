@@ -123,7 +123,10 @@ def call_openrouter(
             )
             for field, props in nested_objects.items():
                 prop_names = list(props.keys())
-                examples += f"The field '{field}' MUST be an array of objects where each object has these EXACT properties:\n"
+                examples += (
+                    f"The field '{field}' MUST be an array of objects "
+                    f"where each object has these EXACT properties:\n"
+                )
 
                 # Show required properties
                 example_obj = "{"
@@ -159,7 +162,7 @@ Correct example:
     "source": "Observed behavior in their natural habitat"
   },
   {
-    "fact": "They can grow up to 6 feet long", 
+    "fact": "They can grow up to 6 feet long",
     "source": "Scientific measurements"
   }
 ]
