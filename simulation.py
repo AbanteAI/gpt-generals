@@ -1,11 +1,15 @@
 import argparse
+import json
+import os
 import random
-from typing import Optional, Tuple, cast
+from typing import Optional, Tuple
 
+from dotenv import load_dotenv
+from openai import OpenAI
 from pydantic import BaseModel, Field
 
 from game_engine import GameEngine
-from llm_utils import Messages, call_openrouter
+from llm_utils import Messages
 from map_generator import MapGenerator
 
 
@@ -94,11 +98,6 @@ def get_unit_move_decision(game: GameEngine, unit_name: str) -> Optional[MoveDec
     )
 
     try:
-        import json
-        from openai import OpenAI
-        from dotenv import load_dotenv
-        import os
-
         # Load environment variables (in case not loaded yet)
         load_dotenv()
 
