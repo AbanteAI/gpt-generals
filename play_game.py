@@ -17,6 +17,7 @@ def main():
     parser.add_argument("--height", type=int, default=10, help="Height of the map")
     parser.add_argument("--water", type=float, default=0.2, help="Probability of water tiles")
     parser.add_argument("--coins", type=int, default=5, help="Number of coins on the map")
+    parser.add_argument("--tui", action="store_true", help="Use terminal UI instead of text mode")
 
     args = parser.parse_args()
 
@@ -28,7 +29,13 @@ def main():
         num_coins=args.coins,
     )
 
-    # Create player controller
+    # Check if we should use the TUI
+    if args.tui:
+        from player_tui import run_player_tui
+        run_player_tui(game)
+        return
+
+    # Create player controller for text mode
     controller = PlayerController(game)
 
     # Game loop
