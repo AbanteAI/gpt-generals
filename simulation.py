@@ -85,6 +85,10 @@ def get_unit_move_decision(game: GameEngine, unit_name: str) -> Optional[MoveDec
         "Your goal is to collect coins on the map. "
         "The game is played on a grid where units can move in four directions "
         "(up, down, left, right). "
+        "Up means moving toward the bottom of the map (increasing row number), "
+        "Down means moving toward the top of the map (decreasing row number), "
+        "Left means moving toward the left of the map (decreasing column number), "
+        "Right means moving toward the right of the map (increasing column number). "
         "Water tiles (~) cannot be traversed."
     )
 
