@@ -1,4 +1,5 @@
 import unittest
+from typing import cast
 from unittest.mock import patch
 
 from game_engine import GameEngine
@@ -73,8 +74,11 @@ class TestLLMMovement(unittest.TestCase):
 
         # Check the returned decision
         self.assertEqual(decision, mock_decision)
-        self.assertEqual(decision.direction, "right")
-        self.assertEqual(decision.reasoning, "Moving right to collect the coin at (1,0)")
+        # Since we're mocking the return value, we know decision is not None
+        self.assertIsNotNone(decision)
+        move_decision = cast(MoveDecision, decision)
+        self.assertEqual(move_decision.direction, "right")
+        self.assertEqual(move_decision.reasoning, "Moving right to collect the coin at (1,0)")
 
     @patch("simulation.call_openrouter")
     def test_error_handling(self, mock_call_openrouter):
