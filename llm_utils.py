@@ -1,5 +1,6 @@
 import os
-from typing import Dict, List, Optional, Type, TypeVar, Union, cast
+from dataclasses import dataclass
+from typing import Dict, Generic, List, Optional, Type, TypeVar, Union, cast
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -37,13 +38,21 @@ class Messages:
 T = TypeVar("T", bound=BaseModel)
 
 
+@dataclass
+class ParsedResponse(Generic[T]):
+    """Class to hold both parsed and raw responses from LLM."""
+
+    parsed: T
+    raw: str
+
+
 def call_openrouter(
     messages: Messages,
     model: str = "openai/gpt-4o-mini",
     site_url: Optional[str] = None,
     site_name: Optional[str] = None,
     response_model: Optional[Type[T]] = None,
-) -> Union[str, T]:
+) -> Union[str, ParsedResponse[T]]:
     """
     Make an API call to OpenRouter, optionally with structured output.
 
@@ -55,7 +64,9 @@ def call_openrouter(
         response_model: Optional Pydantic model for structured output
 
     Returns:
-        Either a string response or a Pydantic model instance if response_model is provided
+        Either:
+        - A string response when response_model is None
+        - A ParsedResponse object containing both parsed model and raw string when response_model is provided
 
     Raises:
         ValueError: If OPEN_ROUTER_KEY environment variable is not set
@@ -86,7 +97,16 @@ def call_openrouter(
             messages=openai_messages,
             response_format=response_model,
         )
-        return cast(T, completion.choices[0].message.parsed)
+
+        # Get both parsed model and raw content
+        parsed_response = cast(T, completion.choices[0].message.parsed)
+        raw_response = completion.choices[0].message.content
+
+        if raw_response is None:
+            raise ValueError("No content in response")
+
+        # Return both in a ParsedResponse object
+        return ParsedResponse(parsed=parsed_response, raw=raw_response)
     else:
         # Standard non-structured response
         completion = client.chat.completions.create(
