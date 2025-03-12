@@ -2,7 +2,7 @@ import argparse
 import json
 import os
 import random
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 
 from dotenv import load_dotenv
 from openai import OpenAI
