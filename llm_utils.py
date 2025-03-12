@@ -91,11 +91,18 @@ def call_openrouter(
         # Get schema information
         schema = response_model.model_json_schema()
 
-        # Extract field types from schema
+        # Analyze schema for field types and nested objects
         field_types = {}
+        nested_objects = {}
+
         for field, details in schema.get("properties", {}).items():
+            # Determine field type
             if details.get("type") == "array":
                 field_types[field] = "array"
+                # Check if this is an array of objects
+                items = details.get("items", {})
+                if items.get("type") == "object":
+                    nested_objects[field] = items.get("properties", {})
             elif details.get("type") == "number":
                 field_types[field] = "number"
             elif details.get("type") == "integer":
@@ -105,17 +112,37 @@ def call_openrouter(
             else:
                 field_types[field] = "string"
 
-        # Format array fields for schema instruction
+        # Format array fields and build examples for complex fields
         array_fields = [f for f, t in field_types.items() if t == "array"]
+        examples = ""
+
+        # Add special instructions for nested object arrays
+        if nested_objects:
+            examples = "\n\nSpecial instructions for complex fields:\n"
+            for field, props in nested_objects.items():
+                prop_names = list(props.keys())
+                examples += f"- '{field}' must be an array of objects with these properties:\n"
+                for prop in prop_names:
+                    examples += f"  * '{prop}': {props[prop].get('description', '')}\n"
+                
+                # Add a concrete example with the correct format
+                examples += f"\nExample format for '{field}':\n"
+                examples += "[\n"
+                examples += "  {\n"
+                for prop in prop_names:
+                    examples += f"    \"{prop}\": \"Example {prop} value\",\n"
+                examples += "  },\n"
+                examples += "  {...additional objects...}\n"
+                examples += "]\n"
 
         # Create a guidance message with schema information
         schema_msg = (
             "Please format your response as a JSON object directly matching this schema:\n"
-            f"- Return a flat object with these root fields: {schema.get('required', [])}\n"
+            f"- Required fields: {schema.get('required', [])}\n"
             "- Do not nest the response inside another object or property\n"
-            f"- These fields must be JSON arrays/lists: {array_fields}\n"
-            "- Use the correct data type for each field\n"
-            "- For fields that expect arrays, provide values as [item1, item2, ...] not as a string"
+            f"- These fields must be arrays: {array_fields}\n"
+            "- Use the correct data types for all fields\n" +
+            examples
         )
 
         # Add schema instruction as a system message
