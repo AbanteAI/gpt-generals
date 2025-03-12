@@ -87,19 +87,54 @@ def get_unit_move_decision(game: GameEngine, unit_name: str) -> Optional[MoveDec
     messages.add_user_message(
         f"You are controlling unit {unit_name} at position {unit_position}. "
         f"Choose a direction to move (up, down, left, or right) to collect coins efficiently.\n\n"
+        f"You must respond with a JSON object containing two fields:\n"
+        f"- direction: one of 'up', 'down', 'left', or 'right'\n"
+        f"- reasoning: a brief explanation of why you chose this direction\n\n"
         f"Game State:\n{state_description}"
     )
 
     try:
-        # Call the API with structured output using our MoveDecision model
-        decision = call_openrouter(
-            messages=messages,
-            model="openai/gpt-4o-mini",  # You can change the model as needed
-            response_model=MoveDecision,
+        import json
+        from openai import OpenAI
+        from dotenv import load_dotenv
+        import os
+
+        # Load environment variables (in case not loaded yet)
+        load_dotenv()
+
+        # Get API key
+        api_key = os.getenv("OPEN_ROUTER_KEY")
+        if not api_key:
+            raise ValueError("OPEN_ROUTER_KEY environment variable must be set")
+
+        # Initialize client
+        client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=api_key,
         )
 
-        # Since we specified the response_model, we know this is a MoveDecision object
-        return cast(MoveDecision, decision)
+        # Convert messages to the format expected by the API
+        openai_messages = messages.to_openai_messages()
+
+        # Request JSON response
+        completion = client.chat.completions.create(
+            model="openai/gpt-4o-mini",
+            messages=openai_messages,
+            response_format={"type": "json_object"},
+        )
+
+        # Extract content
+        content = completion.choices[0].message.content
+        if content is None:
+            raise ValueError("No content in response")
+
+        # Parse JSON content
+        response_data = json.loads(content)
+
+        # Create MoveDecision from parsed data
+        return MoveDecision(
+            direction=response_data["direction"], reasoning=response_data["reasoning"]
+        )
     except Exception as e:
         print(f"Error getting move decision from LLM: {e}")
         return None
