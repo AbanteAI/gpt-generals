@@ -84,12 +84,25 @@ def call_openrouter(
         "messages": openai_messages,
     }
 
-    # Add response_format parameter if a model is provided
+    # Add response_format parameter and schema details if a model is provided
     if response_model:
         params["response_format"] = {"type": "json_object"}
 
-        # OpenAI requires 'json' to be mentioned in messages when using json_object response format
-        # Add a system message mentioning JSON format if there isn't one already
+        # Get schema information
+        schema = response_model.model_json_schema()
+        
+        # Create a guidance message with schema information
+        schema_msg = (
+            "Please format your response as a JSON object directly matching this schema:\n"
+            f"- Return a flat object with these root fields: {schema.get('required', [])}\n"
+            "- Do not nest the response inside another object or property\n"
+            "- Provide all required fields at the top level of the JSON"
+        )
+        
+        # Add schema instruction as a system message
+        params["messages"].append({"role": "system", "content": schema_msg})
+    else:
+        # Just add a simple JSON mention if no model is provided and JSON isn't mentioned
         has_json_mention = any(
             "json" in str(m.get("content", "")).lower() for m in params["messages"]
         )
@@ -106,7 +119,7 @@ def call_openrouter(
                 params["messages"].append(
                     {
                         "role": "system",
-                        "content": f"Please provide your response as JSON conforming to the requested structure.",
+                        "content": "Please provide your response as JSON.",
                     }
                 )
 
