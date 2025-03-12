@@ -100,7 +100,8 @@ def get_structured_game_analysis(game) -> Optional[GameAnalysisResponse]:
         game: GameEngine instance with the current game state
 
     Returns:
-        GameAnalysisResponse with both structured data and raw response, or None if there was an error
+        GameAnalysisResponse with both structured data and raw response,
+        or None if there was an error
     """
     state_description, coin_distances = get_game_state_description(game)
 

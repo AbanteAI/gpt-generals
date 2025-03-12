@@ -77,7 +77,8 @@ def get_unit_move_decision(game: GameEngine, unit_name: str) -> Optional[MoveDec
         unit_name: Name of the unit to get a move decision for
 
     Returns:
-        MoveDecisionResponse with both structured decision and raw response, or None if there was an error
+        MoveDecisionResponse with both structured decision and raw response,
+        or None if there was an error
     """
     state_description = get_game_state_description(game)
     unit_position = game.units[unit_name].position

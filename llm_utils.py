@@ -66,7 +66,8 @@ def call_openrouter(
     Returns:
         Either:
         - A string response when response_model is None
-        - A ParsedResponse object containing both parsed model and raw string when response_model is provided
+        - A ParsedResponse object containing both parsed model and raw string
+          when response_model is provided
 
     Raises:
         ValueError: If OPEN_ROUTER_KEY environment variable is not set
