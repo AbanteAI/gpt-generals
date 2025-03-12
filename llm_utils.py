@@ -88,6 +88,28 @@ def call_openrouter(
     if response_model:
         params["response_format"] = {"type": "json_object"}
 
+        # OpenAI requires 'json' to be mentioned in messages when using json_object response format
+        # Add a system message mentioning JSON format if there isn't one already
+        has_json_mention = any(
+            "json" in str(m.get("content", "")).lower() for m in params["messages"]
+        )
+        if not has_json_mention:
+            # If the last message is from the user, append to it
+            if params["messages"] and params["messages"][-1]["role"] == "user":
+                last_msg = params["messages"][-1]
+                params["messages"][-1] = {
+                    "role": "user",
+                    "content": f"{last_msg['content']} Please format your response as JSON.",
+                }
+            # Otherwise add a new system message
+            else:
+                params["messages"].append(
+                    {
+                        "role": "system",
+                        "content": f"Please provide your response as JSON conforming to the requested structure.",
+                    }
+                )
+
     try:
         # Always use the standard create method
         print(f"Calling OpenRouter API with params: {str(params)}")
@@ -100,7 +122,7 @@ def call_openrouter(
             print("Error: Completion object is None")
             raise ValueError("Invalid response structure from OpenRouter - completion is None")
 
-        if not hasattr(completion, 'choices') or not completion.choices:
+        if not hasattr(completion, "choices") or not completion.choices:
             print(f"Error: No choices in completion. Response: {str(completion)}")
             raise ValueError("Invalid response - no choices in completion")
 
