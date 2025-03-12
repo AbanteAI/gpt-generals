@@ -9,7 +9,7 @@ from openai import OpenAI
 from pydantic import BaseModel, Field
 
 from game_engine import GameEngine
-from llm_utils import Messages, call_openrouter
+from llm_utils import Messages
 from map_generator import MapGenerator
 
 
@@ -20,9 +20,7 @@ class MoveDecision(BaseModel):
         ...,
         description="Direction to move: 'up', 'down', 'left', or 'right'",
         # Add validation to ensure direction is one of the allowed values
-        pattern="
-^
-(up|down|left|right)$",
+        pattern="^(up|down|left|right)$",
     )
     reasoning: str = Field(..., description="Reasoning behind this move decision")
 
@@ -40,9 +38,9 @@ def get_nearby_description(game: GameEngine, unit_name: str) -> str:
     # Define directions (up, down, left, right) and their offsets
     directions = {
         "north": (0, -1),  # Up (decreasing y)
-        "south": (0, 1),   # Down (increasing y)
-        "west": (-1, 0),   # Left (decreasing x)
-        "east": (1, 0),    # Right (increasing x)
+        "south": (0, 1),  # Down (increasing y)
+        "west": (-1, 0),  # Left (decreasing x)
+        "east": (1, 0),  # Right (increasing x)
     }
 
     # Get map dimensions for boundary checking
@@ -72,9 +70,7 @@ def get_nearby_description(game: GameEngine, unit_name: str) -> str:
                         break
 
                 if unit_at_pos:
-                    nearby_descriptions.append(
-                        f"Unit {unit_at_pos} is to the {direction_name}."
-                    )
+                    nearby_descriptions.append(f"Unit {unit_at_pos} is to the {direction_name}.")
 
                 # Check if there's a coin at this position
                 if (new_x, new_y) in game.coin_positions:
@@ -92,8 +88,7 @@ def get_nearby_description(game: GameEngine, unit_name: str) -> str:
 
     # Find nearest coins beyond adjacent cells
     non_adjacent_coins = [
-        pos for pos in game.coin_positions
-        if abs(pos[0] - x) > 1 or abs(pos[1] - y) > 1
+        pos for pos in game.coin_positions if abs(pos[0] - x) > 1 or abs(pos[1] - y) > 1
     ]
 
     if non_adjacent_coins:
