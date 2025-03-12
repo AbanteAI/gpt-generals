@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from game_engine import GameEngine
 from llm_utils import Messages
-from map_generator import MapGenerator
+from map_generator import MapGenerator, TerrainType
 
 
 class MoveDecision(BaseModel):
