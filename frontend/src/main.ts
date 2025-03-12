@@ -1,7 +1,7 @@
 import { Api } from './api';
 import { Renderer } from './renderer';
 
-class Game {
+export class Game {
   private renderer: Renderer;
   private updateInterval: number | null = null;
   
@@ -38,6 +38,8 @@ class Game {
 }
 
 // Start the game when the DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-  new Game();
-});
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    new Game();
+  });
+}

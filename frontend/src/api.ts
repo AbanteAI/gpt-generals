@@ -1,4 +1,4 @@
-import { GameState, TerrainType, Position } from './models';
+import { GameState, TerrainType, Position, Unit } from './models';
 
 export class Api {
   // Mock function to get game state
