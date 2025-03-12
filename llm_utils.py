@@ -88,18 +88,33 @@ def call_openrouter(
     if response_model:
         params["response_format"] = {"type": "json_object"}
 
-    # Always use the standard create method
-    completion = client.chat.completions.create(**params)
-    content = completion.choices[0].message.content
+    try:
+        # Always use the standard create method
+        completion = client.chat.completions.create(**params)
+        
+        # Check if we have valid response data
+        if not completion or not completion.choices or len(completion.choices) == 0:
+            raise ValueError("Invalid response structure from OpenRouter")
+            
+        message = completion.choices[0].message
+        if message is None:
+            raise ValueError("No message in response")
+            
+        content = message.content
+        if content is None:
+            raise ValueError("No content in response message")
 
-    if content is None:
-        raise ValueError("No content in response")
-
-    # If a response model was provided, parse the content into the model
-    if response_model:
-        return response_model.model_validate_json(content)
-    else:
-        return content
+        # If a response model was provided, parse the content into the model
+        if response_model:
+            return response_model.model_validate_json(content)
+        else:
+            return content
+            
+    except Exception as e:
+        # Add better error handling and debugging
+        error_msg = f"OpenRouter API error: {str(e)}"
+        print(f"Error details: {error_msg}")
+        raise ValueError(error_msg) from e
 
 
 if __name__ == "__main__":
