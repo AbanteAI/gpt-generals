@@ -1,6 +1,6 @@
 import unittest
 from typing import cast
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from game_engine import GameEngine
 from map_generator import MapGenerator, TerrainType
@@ -52,39 +52,53 @@ class TestLLMMovement(unittest.TestCase):
         # The map should show water at position (2,2)
         self.assertIn("~", description)
 
-    @patch("simulation.call_openrouter")
-    def test_unit_move_decision(self, mock_call_openrouter):
+    @patch("simulation.OpenAI")
+    def test_unit_move_decision(self, mock_openai):
         """Test getting a move decision from the LLM (mocked)."""
-        # Mock the LLM response
-        mock_decision = MoveDecision(
-            direction="right", reasoning="Moving right to collect the coin at (1,0)"
+        # Mock the chat completions create method
+        mock_client = MagicMock()
+        mock_openai.return_value = mock_client
+
+        # Create a mock response object
+        mock_completion = MagicMock()
+        mock_client.chat.completions.create.return_value = mock_completion
+
+        # Create a mock message with JSON content
+        mock_message = MagicMock()
+        mock_message.content = (
+            '{"direction": "right", "reasoning": "Moving right to collect the coin at (1,0)"}'
         )
-        mock_call_openrouter.return_value = mock_decision
+        mock_completion.choices = [MagicMock(message=mock_message)]
 
         # Get move decision for unit A
         decision = get_unit_move_decision(self.game, "A")
 
-        # Verify the mock was called with expected arguments
-        mock_call_openrouter.assert_called_once()
-        args, kwargs = mock_call_openrouter.call_args
+        # Verify the mock was called
+        mock_client.chat.completions.create.assert_called_once()
 
-        # Check that we're using the right model and unit
-        self.assertEqual(kwargs["response_model"], MoveDecision)
-        self.assertIn("controlling unit A", kwargs["messages"].messages[-1]["content"])
+        # Check arguments to the create method
+        _, kwargs = mock_client.chat.completions.create.call_args
+        self.assertEqual(kwargs["model"], "openai/gpt-4o-mini")
+        self.assertEqual(kwargs["response_format"], {"type": "json_object"})
+
+        # Check that the message contains the expected content
+        sent_messages = kwargs["messages"]
+        user_message = [m for m in sent_messages if m["role"] == "user"][0]
+        self.assertIn(f"controlling unit A", user_message["content"])
 
         # Check the returned decision
-        self.assertEqual(decision, mock_decision)
-        # Since we're mocking the return value, we know decision is not None
         self.assertIsNotNone(decision)
         move_decision = cast(MoveDecision, decision)
         self.assertEqual(move_decision.direction, "right")
         self.assertEqual(move_decision.reasoning, "Moving right to collect the coin at (1,0)")
 
-    @patch("simulation.call_openrouter")
-    def test_error_handling(self, mock_call_openrouter):
+    @patch("simulation.OpenAI")
+    def test_error_handling(self, mock_openai):
         """Test error handling when the LLM call fails."""
-        # Mock an exception being raised by call_openrouter
-        mock_call_openrouter.side_effect = Exception("API error")
+        # Mock the OpenAI client to raise an exception
+        mock_client = MagicMock()
+        mock_openai.return_value = mock_client
+        mock_client.chat.completions.create.side_effect = Exception("API error")
 
         # Get move decision for unit A - should return None but not crash
         decision = get_unit_move_decision(self.game, "A")
