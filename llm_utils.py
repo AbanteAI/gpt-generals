@@ -90,23 +90,54 @@ def call_openrouter(
 
     try:
         # Always use the standard create method
+        print(f"Calling OpenRouter API with params: {str(params)}")
         completion = client.chat.completions.create(**params)
         
+        print(f"Response received. Type: {type(completion)}")
+        
         # Check if we have valid response data
-        if not completion or not completion.choices or len(completion.choices) == 0:
-            raise ValueError("Invalid response structure from OpenRouter")
+        if not completion:
+            print("Error: Completion object is None")
+            raise ValueError("Invalid response structure from OpenRouter - completion is None")
             
-        message = completion.choices[0].message
+        if not hasattr(completion, 'choices') or not completion.choices:
+            print(f"Error: No choices in completion. Response: {str(completion)}")
+            raise ValueError("Invalid response - no choices in completion")
+            
+        if len(completion.choices) == 0:
+            print(f"Error: Empty choices list in response: {str(completion)}")
+            raise ValueError("Invalid response - empty choices list")
+            
+        print(f"Completion has {len(completion.choices)} choices")
+        choice = completion.choices[0]
+        if not choice:
+            print("Error: First choice is None")
+            raise ValueError("Invalid choice object in response")
+            
+        message = choice.message
         if message is None:
+            print(f"Error: No message in choice: {str(choice)}")
             raise ValueError("No message in response")
             
+        print(f"Message: {str(message)}")
         content = message.content
         if content is None:
+            print("Error: No content in message")
             raise ValueError("No content in response message")
+            
+        print(f"Content received (first 100 chars): {content[:100]}...")
 
         # If a response model was provided, parse the content into the model
         if response_model:
-            return response_model.model_validate_json(content)
+            print(f"Parsing with model: {response_model.__name__}")
+            try:
+                result = response_model.model_validate_json(content)
+                print(f"Successfully parsed into {response_model.__name__} object")
+                return result
+            except Exception as parse_error:
+                print(f"Error parsing JSON content: {str(parse_error)}")
+                print(f"Content that failed to parse: {content}")
+                raise ValueError(f"Failed to parse content as {response_model.__name__}: {str(parse_error)}")
         else:
             return content
             
@@ -114,6 +145,8 @@ def call_openrouter(
         # Add better error handling and debugging
         error_msg = f"OpenRouter API error: {str(e)}"
         print(f"Error details: {error_msg}")
+        if "OPEN_ROUTER_KEY" in str(e):
+            print("Check that your OPEN_ROUTER_KEY environment variable is set correctly")
         raise ValueError(error_msg) from e
 
 
