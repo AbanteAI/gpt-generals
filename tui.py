@@ -13,7 +13,6 @@ import time
 from typing import List
 
 from game_engine import GameEngine
-from map_generator import TerrainType
 from simulation import get_unit_move_decision
 
 
@@ -273,7 +272,9 @@ def run_tui_simulation(
         game = GameEngine()
 
     # Run the curses application
-    curses.wrapper(lambda stdscr: SimulationTUI(stdscr, game, delay, use_llm).run_simulation(num_turns))
+    curses.wrapper(
+        lambda stdscr: SimulationTUI(stdscr, game, delay, use_llm).run_simulation(num_turns)
+    )
 
 
 if __name__ == "__main__":
