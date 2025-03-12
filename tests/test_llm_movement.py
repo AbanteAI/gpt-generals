@@ -84,7 +84,7 @@ class TestLLMMovement(unittest.TestCase):
         # Check that the message contains the expected content
         sent_messages = kwargs["messages"]
         user_message = [m for m in sent_messages if m["role"] == "user"][0]
-        self.assertIn(f"controlling unit A", user_message["content"])
+        self.assertIn("controlling unit A", user_message["content"])
 
         # Check the returned decision
         self.assertIsNotNone(decision)
