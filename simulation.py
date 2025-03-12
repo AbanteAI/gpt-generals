@@ -12,7 +12,12 @@ from map_generator import MapGenerator
 class MoveDecision(BaseModel):
     """Model representing a move decision for a unit."""
 
-    direction: str = Field(..., description="Direction to move: 'up', 'down', 'left', or 'right'")
+    direction: str = Field(
+        ...,
+        description="Direction to move: 'up', 'down', 'left', or 'right'",
+        # Add validation to ensure direction is one of the allowed values
+        pattern="^(up|down|left|right)$",
+    )
     reasoning: str = Field(..., description="Reasoning behind this move decision")
 
 
