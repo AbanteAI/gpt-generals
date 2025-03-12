@@ -25,7 +25,7 @@ def main():
         width=args.width,
         height=args.height,
         water_probability=args.water,
-        num_coins=args.coins
+        num_coins=args.coins,
     )
 
     # Create player controller
@@ -62,14 +62,14 @@ def main():
         player_input = input("\nEnter move or 'q' to quit: ").strip().lower()
 
         # Check for quit command
-        if player_input in ['q', 'quit']:
+        if player_input in ["q", "quit"]:
             print("\nGame ended.")
             print(f"Turns played: {game.current_turn}")
             print(f"Coins collected: {total_coins - len(game.coin_positions)} / {total_coins}")
             break
 
         # Check for help command
-        if player_input in ['h', 'help']:
+        if player_input in ["h", "help"]:
             print("\nControls: <unit_letter><direction>")
             print("  Unit letter: A, B, etc.")
             print("  Direction: w (up), a (left), s (down), d (right)")

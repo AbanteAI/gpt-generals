@@ -2,6 +2,7 @@
 Player controller module for the GPT Generals game.
 """
 
+
 class PlayerController:
     """
     Controller class for human player input in the GPT Generals game.
@@ -16,10 +17,10 @@ class PlayerController:
         """
         self.game_engine = game_engine
         self.direction_map = {
-            'w': 'up',
-            'a': 'left',
-            's': 'down',
-            'd': 'right'
+            "w": "up",
+            "a": "left",
+            "s": "down",
+            "d": "right",
         }
 
     def process_input(self, player_input: str) -> bool:
