@@ -96,6 +96,8 @@ class MapGenerator:
     ) -> str:
         """
         Render a map as a string with optional units and coins.
+        The map is displayed with row 0 at the bottom and higher row numbers at the top,
+        so that "up" visually moves toward the top of the displayed map.
 
         Args:
             map_grid: The map to render
@@ -118,7 +120,8 @@ class MapGenerator:
         header = "  " + "".join(f"{i % 10}" for i in range(width))
         result.append(header)
 
-        for y in range(height):
+        # Iterate through rows in reverse order so row 0 is at the bottom
+        for y in range(height - 1, -1, -1):
             # Add row number at the beginning of each row
             row = f"{y % 10} "
 

@@ -111,8 +111,6 @@ class GameEngine:
         Args:
             unit_name: Name of the unit to move
             direction: Direction to move ('up', 'down', 'left', 'right')
-                Note: 'up' means moving toward the bottom of the map (increasing y),
-                      'down' means moving toward the top of the map (decreasing y)
 
         Returns:
             True if the move was successful, False otherwise
@@ -125,10 +123,10 @@ class GameEngine:
 
         # Calculate new position based on direction
         new_x, new_y = x, y
-        if direction == "up" and y < self.height - 1:  # Changed: up now increases y
-            new_y = y + 1
-        elif direction == "down" and y > 0:  # Changed: down now decreases y
+        if direction == "up" and y > 0:
             new_y = y - 1
+        elif direction == "down" and y < self.height - 1:
+            new_y = y + 1
         elif direction == "left" and x > 0:
             new_x = x - 1
         elif direction == "right" and x < self.width - 1:
