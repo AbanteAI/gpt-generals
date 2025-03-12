@@ -114,8 +114,14 @@ class TestGameEngine(unittest.TestCase):
         custom_map = MapGenerator.generate_empty_map(5, 5)
         game = GameEngine(map_grid=custom_map)
 
+        # Position unit A at a location where it can move right
+        game.units["A"].position = (1, 1)
+        # Save state after repositioning
+        game._save_state()
+
         # Make a move and advance turn
-        game.move_unit("A", "right")
+        move_success = game.move_unit("A", "right")
+        self.assertTrue(move_success, "Unit A move right should succeed")
         game.next_turn()
 
         # Check that history has two states
