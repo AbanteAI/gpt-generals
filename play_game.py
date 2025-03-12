@@ -34,7 +34,7 @@ def main():
     # Game loop
     print("Welcome to GPT Generals!")
     print("Controls: <unit_letter><direction> (e.g., 'Aw' to move unit A up)")
-    print("Directions: w (up), a (left), s (down), d (right)")
+    print("Directions: w/k (up), a/h (left), s/j (down), d/l (right)")
     print("Type 'quit' or 'q' to exit")
 
     coins_collected = 0
@@ -72,8 +72,10 @@ def main():
         if player_input in ["h", "help"]:
             print("\nControls: <unit_letter><direction>")
             print("  Unit letter: A, B, etc.")
-            print("  Direction: w (up), a (left), s (down), d (right)")
-            print("Examples: 'Aw' moves unit A up, 'Bd' moves unit B right")
+            print("  Direction: w/k (up), a/h (left), s/j (down), d/l (right)")
+            print(
+                "Examples: 'Aw' moves unit A up, 'Bd' moves unit B right, 'Al' moves unit A right"
+            )
             print("Commands: 'q' to quit, 'h' for help")
             continue
 

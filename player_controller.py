@@ -21,6 +21,10 @@ class PlayerController:
             "a": "left",
             "s": "down",
             "d": "right",
+            "k": "up",  # vim-style up
+            "h": "left",  # vim-style left
+            "j": "down",  # vim-style down
+            "l": "right",  # vim-style right
         }
 
     def process_input(self, player_input: str) -> bool:
@@ -50,7 +54,7 @@ class PlayerController:
 
         # Check if direction is valid
         if direction_key not in self.direction_map:
-            print("Invalid direction. Please use w (up), a (left), s (down), d (right)")
+            print("Invalid direction. Please use w/k (up), a/h (left), s/j (down), d/l (right)")
             return False
 
         # Translate wasd to game directions
