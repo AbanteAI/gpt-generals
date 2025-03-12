@@ -146,16 +146,26 @@ class TestGameEngine(unittest.TestCase):
         # Check header row
         self.assertTrue(rendered_map[0].startswith("  01234"))
 
+        # Since the map is now rendered with row 0 at the bottom (line 5),
+        # we need to adjust our expectations:
+        # For a 5x5 grid, the lines will be:
+        # Line 0: Header
+        # Line 1: Row 4
+        # Line 2: Row 3
+        # Line 3: Row 2
+        # Line 4: Row 1
+        # Line 5: Row 0
+
         # Check water tile at (0,0)
-        self.assertEqual(rendered_map[1][2], "~")
+        self.assertEqual(rendered_map[5][2], "~")  # Now in the last line (row 0)
 
         # Check units
-        self.assertEqual(rendered_map[2][3], "A")  # Unit A at (1,1)
-        self.assertEqual(rendered_map[4][5], "B")  # Unit B at (3,3)
+        self.assertEqual(rendered_map[4][3], "A")  # Unit A at (1,1) is now in the second-to-last line
+        self.assertEqual(rendered_map[2][5], "B")  # Unit B at (3,3) is now 3 lines from the bottom
 
         # Check coins
-        self.assertEqual(rendered_map[3][4], "c")  # Coin at (2,2)
-        self.assertEqual(rendered_map[5][6], "c")  # Coin at (4,4)
+        self.assertEqual(rendered_map[3][4], "c")  # Coin at (2,2) is now 3 lines from the bottom
+        self.assertEqual(rendered_map[1][6], "c")  # Coin at (4,4) is now in the second line
 
 
 if __name__ == "__main__":
