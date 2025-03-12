@@ -116,7 +116,9 @@ class TestGameEngine(unittest.TestCase):
 
         # Position unit A at a location where it can move right
         game.units["A"].position = (1, 1)
-        # Save state after repositioning
+
+        # Clear any existing history and save the current state as initial
+        game.history.clear()
         game._save_state()
 
         # Make a move and advance turn
@@ -124,7 +126,7 @@ class TestGameEngine(unittest.TestCase):
         self.assertTrue(move_success, "Unit A move right should succeed")
         game.next_turn()
 
-        # Check that history has two states
+        # Check that history has two states (initial + after move)
         self.assertEqual(len(game.history), 2)
 
         # Check that turn counter is updated in history
