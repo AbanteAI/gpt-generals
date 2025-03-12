@@ -1,8 +1,14 @@
+import json
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Type, TypeVar, Union, cast
 
+from dotenv import load_dotenv
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
+from pydantic import BaseModel
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 class Messages:
@@ -29,23 +35,28 @@ class Messages:
         return self.messages  # type: ignore
 
 
+T = TypeVar("T", bound=BaseModel)
+
+
 def call_openrouter(
     messages: Messages,
     model: str = "openai/gpt-4o-mini",
     site_url: Optional[str] = None,
     site_name: Optional[str] = None,
-) -> str:
+    response_model: Optional[Type[T]] = None,
+) -> Union[str, T]:
     """
-    Make an API call to OpenRouter.
+    Make an API call to OpenRouter, optionally with structured output.
 
     Args:
         messages: Instance of Messages class with conversation history
         model: Model to use (defaults to gpt-4o-mini)
         site_url: Optional site URL for OpenRouter rankings
         site_name: Optional site name for OpenRouter rankings
+        response_model: Optional Pydantic model for structured output
 
     Returns:
-        The response content from the model
+        Either a string response or a Pydantic model instance if response_model is provided
 
     Raises:
         ValueError: If OPEN_ROUTER_KEY environment variable is not set
@@ -67,14 +78,59 @@ def call_openrouter(
 
     openai_messages = messages.to_openai_messages()
 
-    completion = client.chat.completions.create(
-        extra_headers=extra_headers, model=model, messages=openai_messages
-    )
+    # If a response model is provided, use structured output
+    if response_model:
+        try:
+            # Try using the newer parsing API if available
+            completion = client.beta.chat.completions.parse(
+                extra_headers=extra_headers,
+                model=model,
+                messages=openai_messages,
+                response_format=response_model,
+            )
+            return cast(T, completion.choices[0].message.parsed)
+        except (AttributeError, NotImplementedError):
+            # Fall back to the older approach if the beta interface is not available
+            # This ensures compatibility with OpenRouter and older OpenAI SDK versions
+            schema = response_model.model_json_schema()
+            function_name = response_model.__name__
 
-    content = completion.choices[0].message.content
-    if content is None:
-        raise ValueError("No content in response")
-    return content
+            # Make the API call with a function definition for structured output
+            completion = client.chat.completions.create(
+                extra_headers=extra_headers,
+                model=model,
+                messages=openai_messages,
+                functions=[
+                    {
+                        "name": function_name,
+                        "description": f"Output structured as {function_name}",
+                        "parameters": schema,
+                    }
+                ],
+                function_call={"name": function_name},
+            )
+
+            # Extract the function call arguments
+            function_call = completion.choices[0].message.function_call
+            if not function_call or not function_call.arguments:
+                raise ValueError("No function call in response") from None
+
+            # Parse the JSON arguments and convert to the Pydantic model
+            try:
+                args_dict = json.loads(function_call.arguments)
+                return response_model.model_validate(args_dict)
+            except Exception as e:
+                raise ValueError(f"Failed to parse structured output: {e}") from e
+    else:
+        # Standard non-structured response
+        completion = client.chat.completions.create(
+            extra_headers=extra_headers, model=model, messages=openai_messages
+        )
+
+        content = completion.choices[0].message.content
+        if content is None:
+            raise ValueError("No content in response")
+        return content
 
 
 if __name__ == "__main__":
