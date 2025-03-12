@@ -32,6 +32,7 @@ def main():
     # Check if we should use the TUI
     if args.tui:
         from player_tui import run_player_tui
+
         run_player_tui(game)
         return
 
