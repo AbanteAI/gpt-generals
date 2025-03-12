@@ -364,7 +364,29 @@ if __name__ == "__main__":
     parser.add_argument("--turns", type=int, default=10, help="Number of turns to simulate")
     parser.add_argument("--custom-map", action="store_true", help="Use a custom map")
     parser.add_argument("--llm", action="store_true", help="Use LLM for unit movement decisions")
+    parser.add_argument(
+        "--tui", action="store_true", help="Use terminal user interface for visualization"
+    )
+    parser.add_argument(
+        "--delay", type=float, default=0.5, help="Delay between turns in seconds (default: 0.5)"
+    )
 
     args = parser.parse_args()
 
-    run_simulation(num_turns=args.turns, use_custom_map=args.custom_map, use_llm=args.llm)
+    if args.tui:
+        # Use the TUI version if requested
+        from tui import run_tui_simulation
+
+        run_tui_simulation(
+            num_turns=args.turns,
+            use_custom_map=args.custom_map,
+            use_llm=args.llm,
+            delay=args.delay,
+        )
+    else:
+        # Use the regular text-based simulation
+        run_simulation(
+            num_turns=args.turns,
+            use_custom_map=args.custom_map,
+            use_llm=args.llm,
+        )
