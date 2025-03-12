@@ -62,16 +62,16 @@ def get_animal_info(animal_name: str) -> Optional[AnimalInfo]:
 
     try:
         print("Calling OpenRouter API...")
-        
+
         # Call the API with structured output using our AnimalInfo model
         animal_info = call_openrouter(
             messages=messages,
             model="openai/gpt-4o-mini",  # You can change the model as needed
             response_model=AnimalInfo,
         )
-        
+
         print(f"Received response type: {type(animal_info)}")
-        
+
         # Since we specified the response_model, we know this is an AnimalInfo object
         return animal_info  # type: ignore
     except Exception as e:
