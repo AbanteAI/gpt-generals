@@ -53,8 +53,12 @@ class TestLLMMovement(unittest.TestCase):
         self.assertIn("~", description)
 
     @patch("simulation.OpenAI")
-    def test_unit_move_decision(self, mock_openai):
+    @patch("simulation.os.getenv")
+    def test_unit_move_decision(self, mock_getenv, mock_openai):
         """Test getting a move decision from the LLM (mocked)."""
+        # Mock the environment variable check
+        mock_getenv.return_value = "fake_api_key"
+
         # Mock the chat completions create method
         mock_client = MagicMock()
         mock_openai.return_value = mock_client
@@ -93,8 +97,12 @@ class TestLLMMovement(unittest.TestCase):
         self.assertEqual(move_decision.reasoning, "Moving right to collect the coin at (1,0)")
 
     @patch("simulation.OpenAI")
-    def test_error_handling(self, mock_openai):
+    @patch("simulation.os.getenv")
+    def test_error_handling(self, mock_getenv, mock_openai):
         """Test error handling when the LLM call fails."""
+        # Mock the environment variable check
+        mock_getenv.return_value = "fake_api_key"
+
         # Mock the OpenAI client to raise an exception
         mock_client = MagicMock()
         mock_openai.return_value = mock_client
