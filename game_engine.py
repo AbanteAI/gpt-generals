@@ -124,12 +124,16 @@ class GameEngine:
         # Calculate new position based on direction
         new_x, new_y = x, y
         if direction == "up" and y > 0:
+            # 'up' means visually moving toward the top (decreasing y-coordinate)
             new_y = y - 1
         elif direction == "down" and y < self.height - 1:
+            # 'down' means visually moving toward the bottom (increasing y-coordinate)
             new_y = y + 1
         elif direction == "left" and x > 0:
+            # 'left' means moving toward the left (decreasing x-coordinate)
             new_x = x - 1
         elif direction == "right" and x < self.width - 1:
+            # 'right' means moving toward the right (increasing x-coordinate)
             new_x = x + 1
         else:
             return False
