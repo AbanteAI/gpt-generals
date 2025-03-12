@@ -97,16 +97,19 @@ def get_unit_surroundings(game: GameEngine, unit_name: str) -> str:
         else:
             surroundings.append(
                 f"The closest coin is {distance} steps away {direction} "
-                f"({y_dist} {('step' if y_dist == 1 else 'steps')} {'up' if 'up' in direction else 'down' if 'down' in direction else ''}"
+                f"({y_dist} {('step' if y_dist == 1 else 'steps')} "
+                f"{'up' if 'up' in direction else 'down' if 'down' in direction else ''}"
                 f"{' and ' if 'up' in direction or 'down' in direction else ''}"
-                f"{x_dist} {('step' if x_dist == 1 else 'steps')} {'left' if 'left' in direction else 'right' if 'right' in direction else ''}"
+                f"{x_dist} {('step' if x_dist == 1 else 'steps')} "
+                f"{'left' if 'left' in direction else 'right' if 'right' in direction else ''}"
                 f")."
             )
         
         # Mention other coins
         if len(nearby_coins) > 1:
             other_coins_text = []
-            for i, (coin_pos, distance, direction, x_dist, y_dist) in enumerate(nearby_coins[1:4]):  # Limit to 3 more coins
+            # Limit to 3 more coins
+            for _i, (_coin_pos, distance, direction, _x_dist, _y_dist) in enumerate(nearby_coins[1:4]):
                 other_coins_text.append(f"another coin {distance} steps away {direction}")
             
             if other_coins_text:
@@ -121,7 +124,8 @@ def get_unit_surroundings(game: GameEngine, unit_name: str) -> str:
     # Find nearby water obstacles (within 3 steps)
     water_tiles = []
     for y in range(max(0, unit_position[1] - 3), min(len(game.map_grid), unit_position[1] + 4)):
-        for x in range(max(0, unit_position[0] - 3), min(len(game.map_grid[0]), unit_position[0] + 4)):
+        x_range = range(max(0, unit_position[0] - 3), min(len(game.map_grid[0]), unit_position[0] + 4))
+        for x in x_range:
             if game.map_grid[y][x] == TerrainType.WATER:
                 pos = (x, y)
                 distance = calculate_manhattan_distance(unit_position, pos)
@@ -135,7 +139,7 @@ def get_unit_surroundings(game: GameEngine, unit_name: str) -> str:
     # Describe water obstacles
     if water_tiles:
         water_directions = []
-        for pos, distance, direction in water_tiles[:3]:  # Limit to 3 water tiles
+        for _pos, distance, direction in water_tiles[:3]:  # Limit to 3 water tiles
             water_directions.append(f"{direction} ({distance} step{'s' if distance > 1 else ''})")
         
         water_desc = ", ".join(water_directions)
@@ -151,7 +155,7 @@ def get_unit_surroundings(game: GameEngine, unit_name: str) -> str:
             other_units.append((name, pos, distance, direction))
     
     # Describe other units
-    for name, pos, distance, direction in other_units:
+    for name, _pos, distance, direction in other_units:
         surroundings.append(f"Unit {name} is {distance} steps away {direction}.")
     
     # Check borders
