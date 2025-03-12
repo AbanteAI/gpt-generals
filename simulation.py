@@ -1,6 +1,6 @@
 import argparse
 import random
-from typing import List, Optional, Tuple, cast
+from typing import Optional, Tuple, cast
 
 from pydantic import BaseModel, Field
 
@@ -12,11 +12,11 @@ from map_generator import MapGenerator
 class MoveDecision(BaseModel):
     """Model representing a move decision for a unit."""
     direction: str = Field(
-        ..., 
+        ...,
         description="Direction to move: 'up', 'down', 'left', or 'right'"
     )
     reasoning: str = Field(
-        ..., 
+        ...,
         description="Reasoning behind this move decision"
     )
 
@@ -142,7 +142,7 @@ def run_simulation(num_turns: int = 10, use_custom_map: bool = False, use_llm: b
                 # Get move decision from LLM
                 print(f"Consulting LLM for unit {unit_name}...")
                 decision = get_unit_move_decision(game, unit_name)
-                
+
                 if decision:
                     direction = decision.direction
                     print(f"Unit {unit_name} reasoning: {decision.reasoning}")
@@ -153,7 +153,7 @@ def run_simulation(num_turns: int = 10, use_custom_map: bool = False, use_llm: b
             else:
                 # Use random movement
                 direction = random.choice(directions)
-            
+
             success = game.move_unit(unit_name, direction)
             result = "Success" if success else "Failed"
             print(f"Unit {unit_name} attempts to move {direction}: {result}")
@@ -172,7 +172,7 @@ if __name__ == "__main__":
     parser.add_argument("--turns", type=int, default=10, help="Number of turns to simulate")
     parser.add_argument("--custom-map", action="store_true", help="Use a custom map")
     parser.add_argument("--llm", action="store_true", help="Use LLM for unit movement decisions")
-    
+
     args = parser.parse_args()
-    
+
     run_simulation(num_turns=args.turns, use_custom_map=args.custom_map, use_llm=args.llm)
