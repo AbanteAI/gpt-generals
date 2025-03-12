@@ -118,33 +118,65 @@ def call_openrouter(
 
         # Add special instructions for nested object arrays
         if nested_objects:
-            examples = "\n\nIMPORTANT: Some fields require complex objects, not just simple values:\n"
+            examples = (
+                "\n\nIMPORTANT: Some fields require complex objects, not just simple values:\n"
+            )
             for field, props in nested_objects.items():
                 prop_names = list(props.keys())
                 examples += f"The field '{field}' MUST be an array of objects where each object has these EXACT properties:\n"
-                
+
                 # Show required properties
                 example_obj = "{"
                 for i, prop in enumerate(prop_names):
-                    desc = props[prop].get('description', prop)
+                    desc = props[prop].get("description", prop)
                     examples += f"  - '{prop}': {desc}\n"
                     example_obj += f'"{prop}": "value for {prop}"'
                     if i < len(prop_names) - 1:
                         example_obj += ", "
                 example_obj += "}"
-                
-                # Simplified example 
+
+                # Simplified example
                 examples += f"\nExample for '{field}': [{example_obj}, {example_obj}]\n"
                 examples += f"DO NOT USE simple strings for items in the '{field}' array!\n\n"
 
-        # Create a guidance message with schema information
-        schema_msg = (
-            "Please format your response as a JSON object directly matching this schema:\n"
-            f"- Required fields: {schema.get('required', [])}\n"
-            "- Do not nest the response inside another object or property\n"
-            f"- These fields must be arrays: {array_fields}\n"
-            "- Use the correct data types for all fields\n" +
-            examples
+        # Create a guidance message with schema information - focus on structure
+        schema_msg = "Please format your response as a JSON object with this EXACT structure:\n"
+
+        # Add specific model-structure examples for common fields
+        schema_msg += """
+IMPORTANT: The 'interesting_facts' field must be an array of objects, NOT strings.
+Each object in the 'interesting_facts' array MUST have these EXACT properties:
+
+{
+  "fact": "string with the fact",
+  "source": "string with the source"
+}
+
+Correct example:
+"interesting_facts": [
+  {
+    "fact": "They are excellent swimmers",
+    "source": "Observed behavior in their natural habitat"
+  },
+  {
+    "fact": "They can grow up to 6 feet long", 
+    "source": "Scientific measurements"
+  }
+]
+
+INCORRECT (do not do this):
+"interesting_facts": [
+  "They are excellent swimmers",
+  "They can grow up to 6 feet long"
+]
+"""
+
+        # Add other schema requirements
+        schema_msg += (
+            f"\nRequired fields: {schema.get('required', [])}\n"
+            "Do not nest the response inside another object or property.\n"
+            f"Array fields: {array_fields}\n"
+            "Use the correct data types for all fields."
         )
 
         # Add schema instruction as a system message
