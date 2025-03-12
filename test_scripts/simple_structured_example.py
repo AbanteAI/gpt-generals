@@ -80,8 +80,15 @@ def get_animal_info(animal_name: str) -> Optional[AnimalInfoResponse]:
 
         # The response is a ParsedResponse when response_model is provided
         if hasattr(response, "parsed") and hasattr(response, "raw"):
+            # Cast to ParsedResponse type to help the type checker
+            from typing import cast
+
+            from llm_utils import ParsedResponse
+
+            parsed_response = cast(ParsedResponse[AnimalInfo], response)
+
             # response now contains both parsed model and raw string
-            return AnimalInfoResponse(info=response.parsed, raw_response=response.raw)
+            return AnimalInfoResponse(info=parsed_response.parsed, raw_response=parsed_response.raw)
         else:
             # This should never happen, but satisfies the type checker
             raise TypeError("Expected ParsedResponse but got string")
