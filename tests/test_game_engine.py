@@ -160,8 +160,8 @@ class TestGameEngine(unittest.TestCase):
         self.assertEqual(rendered_map[5][2], "~")  # Now in the last line (row 0)
 
         # Check units
-        self.assertEqual(rendered_map[4][3], "A")  # Unit A at (1,1) is now in the second-to-last line
-        self.assertEqual(rendered_map[2][5], "B")  # Unit B at (3,3) is now 3 lines from the bottom
+        self.assertEqual(rendered_map[4][3], "A")  # Unit A at (1,1) now in second-to-last line
+        self.assertEqual(rendered_map[2][5], "B")  # Unit B at (3,3) now 3 lines from the bottom
 
         # Check coins
         self.assertEqual(rendered_map[3][4], "c")  # Coin at (2,2) is now 3 lines from the bottom
