@@ -109,8 +109,13 @@ def get_unit_move_decision(game: GameEngine, unit_name: str) -> Optional[MoveDec
             response_model=MoveDecision,
         )
 
-        # Return both the parsed model and raw response
-        return MoveDecisionResponse(decision=response.parsed, raw_response=response.raw)
+        # The response is a ParsedResponse when response_model is provided
+        if hasattr(response, "parsed") and hasattr(response, "raw"):
+            # Return both the parsed model and raw response
+            return MoveDecisionResponse(decision=response.parsed, raw_response=response.raw)
+        else:
+            # This should never happen, but satisfies the type checker
+            raise TypeError("Expected ParsedResponse but got string")
     except Exception as e:
         print(f"Error getting move decision from LLM: {e}")
         return None

@@ -52,7 +52,7 @@ def call_openrouter(
     site_url: Optional[str] = None,
     site_name: Optional[str] = None,
     response_model: Optional[Type[T]] = None,
-) -> Union[str, ParsedResponse[T]]:
+) -> Union[str, ParsedResponse[T]]:  # type: ignore
     """
     Make an API call to OpenRouter, optionally with structured output.
 

@@ -125,8 +125,13 @@ def get_structured_game_analysis(game) -> Optional[GameAnalysisResponse]:
             response_model=GameAnalysis,
         )
 
-        # response now contains both parsed model and raw string
-        return GameAnalysisResponse(analysis=response.parsed, raw_response=response.raw)
+        # The response is a ParsedResponse when response_model is provided
+        if hasattr(response, "parsed") and hasattr(response, "raw"):
+            # response now contains both parsed model and raw string
+            return GameAnalysisResponse(analysis=response.parsed, raw_response=response.raw)
+        else:
+            # This should never happen, but satisfies the type checker
+            raise TypeError("Expected ParsedResponse but got string")
     except Exception as e:
         print(f"Error getting structured analysis: {e}")
         return None

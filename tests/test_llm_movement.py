@@ -93,9 +93,14 @@ class TestLLMMovement(unittest.TestCase):
         # Check the returned decision response
         self.assertIsNotNone(response)
         self.assertIsInstance(response, MoveDecisionResponse)
-        self.assertEqual(response.decision.direction, "right")
-        self.assertEqual(response.decision.reasoning, "Moving right to collect the coin at (1,0)")
-        self.assertEqual(response.raw_response, raw_response)
+
+        # Now that we've confirmed response is not None and is the right type, we can safely use it
+        if response is not None:  # This is for the type checker
+            self.assertEqual(response.decision.direction, "right")
+            self.assertEqual(
+                response.decision.reasoning, "Moving right to collect the coin at (1,0)"
+            )
+            self.assertEqual(response.raw_response, raw_response)
 
     @patch("simulation.call_openrouter")
     def test_error_handling(self, mock_call_openrouter):
