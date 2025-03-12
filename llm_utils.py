@@ -1,4 +1,3 @@
-import json
 import os
 from typing import Dict, List, Optional, Type, TypeVar, Union, cast
 
@@ -77,56 +76,22 @@ def call_openrouter(
         extra_headers["X-Title"] = site_name
 
     openai_messages = messages.to_openai_messages()
+    
+    # Common parameters for API calls
+    params = {
+        "extra_headers": extra_headers,
+        "model": model,
+        "messages": openai_messages,
+    }
 
-    # If a response model is provided, use structured output
+    # Handle structured output if a response model is provided
     if response_model:
-        try:
-            # Try using the newer parsing API if available
-            completion = client.beta.chat.completions.parse(
-                extra_headers=extra_headers,
-                model=model,
-                messages=openai_messages,
-                response_format=response_model,
-            )
-            return cast(T, completion.choices[0].message.parsed)
-        except (AttributeError, NotImplementedError):
-            # Fall back to the older approach if the beta interface is not available
-            # This ensures compatibility with OpenRouter and older OpenAI SDK versions
-            schema = response_model.model_json_schema()
-            function_name = response_model.__name__
-
-            # Make the API call with a function definition for structured output
-            completion = client.chat.completions.create(
-                extra_headers=extra_headers,
-                model=model,
-                messages=openai_messages,
-                functions=[
-                    {
-                        "name": function_name,
-                        "description": f"Output structured as {function_name}",
-                        "parameters": schema,
-                    }
-                ],
-                function_call={"name": function_name},
-            )
-
-            # Extract the function call arguments
-            function_call = completion.choices[0].message.function_call
-            if not function_call or not function_call.arguments:
-                raise ValueError("No function call in response") from None
-
-            # Parse the JSON arguments and convert to the Pydantic model
-            try:
-                args_dict = json.loads(function_call.arguments)
-                return response_model.model_validate(args_dict)
-            except Exception as e:
-                raise ValueError(f"Failed to parse structured output: {e}") from e
+        params["response_format"] = response_model
+        completion = client.beta.chat.completions.parse(**params)
+        return cast(T, completion.choices[0].message.parsed)
     else:
         # Standard non-structured response
-        completion = client.chat.completions.create(
-            extra_headers=extra_headers, model=model, messages=openai_messages
-        )
-
+        completion = client.chat.completions.create(**params)
         content = completion.choices[0].message.content
         if content is None:
             raise ValueError("No content in response")
