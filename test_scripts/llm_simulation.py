@@ -25,16 +25,13 @@ def main():
         description="Run a GPT Generals simulation with LLM-directed movement."
     )
     parser.add_argument(
-        "--turns", type=int, default=5,
-        help="Number of turns to simulate (default: 5)"
+        "--turns", type=int, default=5, help="Number of turns to simulate (default: 5)"
     )
     parser.add_argument(
-        "--random", action="store_true",
-        help="Use random movement instead of LLM (for comparison)"
+        "--random", action="store_true", help="Use random movement instead of LLM (for comparison)"
     )
     parser.add_argument(
-        "--custom-map", action="store_true",
-        help="Use a custom map with more land and coins"
+        "--custom-map", action="store_true", help="Use a custom map with more land and coins"
     )
 
     args = parser.parse_args()
@@ -50,11 +47,7 @@ def main():
     print(f"\nRunning {args.turns}-turn simulation with {mode} movement...\n")
 
     try:
-        run_simulation(
-            num_turns=args.turns,
-            use_custom_map=args.custom_map,
-            use_llm=use_llm
-        )
+        run_simulation(num_turns=args.turns, use_custom_map=args.custom_map, use_llm=use_llm)
         print("\nSimulation completed successfully!")
     except ValueError as e:
         if "OPEN_ROUTER_KEY" in str(e):

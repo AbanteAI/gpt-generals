@@ -56,8 +56,7 @@ class TestLLMMovement(unittest.TestCase):
         """Test getting a move decision from the LLM (mocked)."""
         # Mock the LLM response
         mock_decision = MoveDecision(
-            direction="right",
-            reasoning="Moving right to collect the coin at (1,0)"
+            direction="right", reasoning="Moving right to collect the coin at (1,0)"
         )
         mock_call_openrouter.return_value = mock_decision
 

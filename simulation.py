@@ -11,14 +11,9 @@ from map_generator import MapGenerator
 
 class MoveDecision(BaseModel):
     """Model representing a move decision for a unit."""
-    direction: str = Field(
-        ...,
-        description="Direction to move: 'up', 'down', 'left', or 'right'"
-    )
-    reasoning: str = Field(
-        ...,
-        description="Reasoning behind this move decision"
-    )
+
+    direction: str = Field(..., description="Direction to move: 'up', 'down', 'left', or 'right'")
+    reasoning: str = Field(..., description="Reasoning behind this move decision")
 
 
 def calculate_manhattan_distance(pos1: Tuple[int, int], pos2: Tuple[int, int]) -> int:
