@@ -90,15 +90,34 @@ def call_openrouter(
 
         # Get schema information
         schema = response_model.model_json_schema()
-        
+
+        # Extract field types from schema
+        field_types = {}
+        for field, details in schema.get("properties", {}).items():
+            if details.get("type") == "array":
+                field_types[field] = "array"
+            elif details.get("type") == "number":
+                field_types[field] = "number"
+            elif details.get("type") == "integer":
+                field_types[field] = "integer"
+            elif details.get("type") == "boolean":
+                field_types[field] = "boolean"
+            else:
+                field_types[field] = "string"
+
+        # Format array fields for schema instruction
+        array_fields = [f for f, t in field_types.items() if t == "array"]
+
         # Create a guidance message with schema information
         schema_msg = (
             "Please format your response as a JSON object directly matching this schema:\n"
             f"- Return a flat object with these root fields: {schema.get('required', [])}\n"
             "- Do not nest the response inside another object or property\n"
-            "- Provide all required fields at the top level of the JSON"
+            f"- These fields must be JSON arrays/lists: {array_fields}\n"
+            "- Use the correct data type for each field\n"
+            "- For fields that expect arrays, provide values as [item1, item2, ...] not as a string"
         )
-        
+
         # Add schema instruction as a system message
         params["messages"].append({"role": "system", "content": schema_msg})
     else:
