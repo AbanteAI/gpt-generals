@@ -52,6 +52,7 @@ class GameRoom:
     players: Dict[str, Dict[str, Any]]
     status: str  # 'waiting', 'playing', 'finished'
     created_at: int
+    visible: bool = True  # Whether the room is visible in the lobby list
     game: Optional[GameEngine] = None
 
 
@@ -146,6 +147,22 @@ class GameServer:
             # Send the current game state to the new client
             await self.send_game_state(websocket)
         else:
+            # Check if a room_id was provided in the connection query parameters
+            direct_room_id = None
+            if hasattr(websocket, "path") and "?" in websocket.path:
+                query_string = websocket.path.split("?", 1)[1]
+                for param in query_string.split("&"):
+                    if "=" in param:
+                        key, value = param.split("=", 1)
+                        if key == "room":
+                            direct_room_id = value
+                            break
+
+            # Store the direct room ID for later use
+            if direct_room_id and direct_room_id in self.rooms:
+                self.clients[websocket]["direct_room_id"] = direct_room_id
+                logger.info(f"Client {client_id} connecting directly to room {direct_room_id}")
+
             # Send the lobby state to the new client
             await self.send_lobby_state(websocket)
 
@@ -235,25 +252,28 @@ class GameServer:
         """
         rooms_serialized = []
         for _room_id, room in self.rooms.items():
-            rooms_serialized.append(
-                {
-                    "id": room.id,
-                    "name": room.name,
-                    "hostId": room.host_id,
-                    "hostName": room.host_name,
-                    "players": [
-                        {
-                            "id": player_id,
-                            "name": player_info["name"],
-                            "color": player_info["color"],
-                            "isHost": player_info["is_host"],
-                        }
-                        for player_id, player_info in room.players.items()
-                    ],
-                    "status": room.status,
-                    "createdAt": room.created_at,
-                }
-            )
+            # Only include visible rooms in the lobby state
+            if room.visible:
+                rooms_serialized.append(
+                    {
+                        "id": room.id,
+                        "name": room.name,
+                        "hostId": room.host_id,
+                        "hostName": room.host_name,
+                        "players": [
+                            {
+                                "id": player_id,
+                                "name": player_info["name"],
+                                "color": player_info["color"],
+                                "isHost": player_info["is_host"],
+                            }
+                            for player_id, player_info in room.players.items()
+                        ],
+                        "status": room.status,
+                        "createdAt": room.created_at,
+                        "visible": room.visible,
+                    }
+                )
 
         return {"type": "lobby_state", "rooms": rooms_serialized}
 
@@ -349,6 +369,27 @@ class GameServer:
             if not command:
                 await websocket.send(json.dumps({"type": "error", "message": "Missing command"}))
                 return
+
+            # Check if there's a direct room ID to auto-join
+            client_info = self.clients.get(websocket, {})
+            if "direct_room_id" in client_info and command == "lobby_set_player_info":
+                # Auto-join the room after player sets their info
+                direct_room_id = client_info.pop("direct_room_id")  # Remove to avoid re-joining
+                if direct_room_id in self.rooms:
+                    # First process the set info command
+                    await self.process_lobby_command(websocket, command, message_data)
+
+                    # Then create a join room command
+                    join_data = {
+                        "command": "lobby_join_room",
+                        "room_id": direct_room_id,
+                        "player_name": client_info.get("name"),
+                        "player_color": client_info.get("color", "#2196F3"),
+                    }
+
+                    # Process the join command
+                    await self.process_lobby_command(websocket, "lobby_join_room", join_data)
+                    return
 
             # Handle lobby commands
             if self.enable_lobby and command.startswith("lobby_"):
@@ -586,6 +627,7 @@ class GameServer:
                 "player_name", client_info.get("name", f"Player_{client_id[:6]}")
             )
             player_color = message_data.get("player_color", "#F44336")  # Default red
+            room_visible = message_data.get("room_visible", True)  # Default to visible
 
             # Update client info
             client_info["name"] = player_name
@@ -603,6 +645,7 @@ class GameServer:
                 players={client_id: {"name": player_name, "color": player_color, "is_host": True}},
                 status="waiting",
                 created_at=int(time.time()),
+                visible=room_visible,
                 game=None,  # Game will be created when starting
             )
 
@@ -620,6 +663,7 @@ class GameServer:
                         "success": True,
                         "room_id": room_id,
                         "room_name": room_name,
+                        "room_visible": room_visible,
                     }
                 )
             )
@@ -665,6 +709,7 @@ class GameServer:
                         "success": True,
                         "room_id": room_id,
                         "room_name": room.name,
+                        "room_visible": room.visible,
                     }
                 )
             )
@@ -805,6 +850,45 @@ class GameServer:
 
             # Send success response
             await websocket.send(json.dumps({"type": "player_info_updated", "success": True}))
+
+        elif command == "lobby_get_room":
+            room_id = message_data.get("room_id")
+
+            if not room_id or room_id not in self.rooms:
+                await websocket.send(
+                    json.dumps({"type": "room_info", "success": False, "message": "Room not found"})
+                )
+                return
+
+            room = self.rooms[room_id]
+
+            # Send the room info - we provide info even for invisible rooms when directly requested
+            await websocket.send(
+                json.dumps(
+                    {
+                        "type": "room_info",
+                        "success": True,
+                        "room": {
+                            "id": room.id,
+                            "name": room.name,
+                            "hostId": room.host_id,
+                            "hostName": room.host_name,
+                            "players": [
+                                {
+                                    "id": player_id,
+                                    "name": player_info["name"],
+                                    "color": player_info["color"],
+                                    "isHost": player_info["is_host"],
+                                }
+                                for player_id, player_info in room.players.items()
+                            ],
+                            "status": room.status,
+                            "createdAt": room.created_at,
+                            "visible": room.visible,
+                        },
+                    }
+                )
+            )
 
         else:
             await websocket.send(
