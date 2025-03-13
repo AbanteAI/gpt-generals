@@ -1,9 +1,9 @@
-import { Api } from '../api';
+import { getGameState } from '../api';
 import { TerrainType } from '../models';
 
-describe('Api', () => {
+describe('API functions', () => {
   test('getGameState returns valid game state', async () => {
-    const gameState = await Api.getGameState();
+    const gameState = await getGameState();
     
     // Check that the game state has all required fields
     expect(gameState).toHaveProperty('mapGrid');

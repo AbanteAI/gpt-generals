@@ -1,10 +1,12 @@
 # GPT Generals Frontend Update
 
 ## What's New
-- Added a basic HTML/TypeScript frontend in the `frontend` folder
-- Implemented grid-based map visualization
-- Added unit tests with Jest
-- CI integration for automatic testing
+- Migrated from Webpack to Vite for faster development and builds
+- Switched from vanilla TypeScript to React with TypeScript
+- Implemented Material UI (MUI) for modern UI components
+- Maintained the same grid-based map visualization with improved styling
+- Updated tests to work with React components
+- Kept API separation with improved functional exports
 
 ## How to Run the Frontend
 1. Navigate to the frontend directory:
@@ -17,16 +19,32 @@
    npm install
    ```
 
-3. Build the project:
+3. Start the development server:
+   ```
+   npm run dev
+   ```
+   This will start Vite's development server with hot module replacement at http://localhost:5173
+
+4. Or build for production:
    ```
    npm run build
    ```
-
-4. Open index.html in your browser or use a simple HTTP server:
+   And then preview the production build:
    ```
-   npx http-server .
+   npm run preview
    ```
 
 ## Development
 - Run tests: `npm test`
-- Watch mode for development: `npm run watch`
+- Watch tests: `npm run test:watch`
+- The project uses React with TypeScript and MUI components
+- The API interface remains separate from the UI components
+
+## Project Structure
+- `/src` - Source files
+  - `/components` - React components
+  - `/tests` - Test files
+  - `api.ts` - API functions (same functionality as before)
+  - `App.tsx` - Main React application component
+  - `main.tsx` - Application entry point
+  - `models.ts` - TypeScript interfaces and models
