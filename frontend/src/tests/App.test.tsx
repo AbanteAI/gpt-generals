@@ -27,9 +27,9 @@ jest.mock('../components/ChatPanel', () => ({
   )
 }));
 
-// Mock the API functions
-jest.mock('../api', () => {
-  // Create mock implementations
+// Create mock implementations for the API module 
+// Note: This must come BEFORE the jest.mock call
+const createApiMock = () => {
   return {
     getGameState: () => getGameStateMock(),
     getChatHistory: () => getChatHistoryMock(),
@@ -41,17 +41,29 @@ jest.mock('../api', () => {
     
     // Mock the gameClient object that App.tsx uses
     gameClient: {
-      getCurrentGameState: jest.fn().mockReturnValue(mockGameState),
-      getCurrentChatHistory: jest.fn().mockReturnValue(mockChatHistory),
+      getCurrentGameState: jest.fn().mockReturnValue({
+        mapGrid: [[0, 0], [0, 0]],
+        units: { 'A': { name: 'A', position: { x: 0, y: 0 } } },
+        coinPositions: [{ x: 1, y: 1 }],
+        turn: 1
+      }),
+      getCurrentChatHistory: jest.fn().mockReturnValue({
+        messages: []
+      }),
       
       // Subscriptions with callbacks
       subscribeToGameState: jest.fn().mockImplementation(callback => {
-        callback(mockGameState);
+        callback({
+          mapGrid: [[0, 0], [0, 0]],
+          units: { 'A': { name: 'A', position: { x: 0, y: 0 } } },
+          coinPositions: [{ x: 1, y: 1 }],
+          turn: 1
+        });
         return jest.fn(); // Return unsubscribe function
       }),
       
       subscribeToChatHistory: jest.fn().mockImplementation(callback => {
-        callback(mockChatHistory);
+        callback({ messages: [] });
         return jest.fn();
       }),
       
@@ -67,7 +79,10 @@ jest.mock('../api', () => {
       sendChatMessage: jest.fn().mockResolvedValue(true)
     }
   };
-});
+};
+
+// Mock the API functions
+jest.mock('../api', () => createApiMock());
 
 describe('App', () => {
   beforeEach(() => {
