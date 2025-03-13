@@ -1,102 +1,188 @@
 #!/usr/bin/env python3
 """
-Main script for playing GPT Generals with manual input.
+Main script for playing GPT Generals with client-server architecture.
+
+This script can start the server in the background and run a client,
+or it can start either the server or client independently.
 """
 
 import argparse
+import logging
+import time
 
-from game_engine import GameEngine
-from player_controller import PlayerController
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
+
+
+def run_standalone_text_client(host, port):
+    """Run a text-based client in standalone mode."""
+    import sys
+
+    from game_client import main as run_text_client
+
+    # Update sys.argv to pass the appropriate arguments to the client
+    sys.argv = ["game_client.py", "--host", host, "--port", str(port)]
+
+    # Run the text client
+    run_text_client()
+
+
+def run_standalone_tui_client(host, port):
+    """Run a TUI client in standalone mode."""
+    from client_tui import run_client_tui
+
+    # Run the TUI client
+    run_client_tui(host=host, port=port)
+
+
+def run_standalone_server(host, port, width, height, water_probability, num_coins, debug=False):
+    """Run a server in standalone mode."""
+    import asyncio
+
+    from game_server import GameServer
+
+    # Create and start the server
+    server = GameServer(
+        host=host,
+        port=port,
+        width=width,
+        height=height,
+        water_probability=water_probability,
+        num_coins=num_coins,
+    )
+
+    # Set debug logging if requested
+    if debug:
+        logger.setLevel(logging.DEBUG)
+
+    # Run the server in the main thread
+    logger.info(f"Starting server on {host}:{port}")
+    asyncio.run(server.start_server())
+
+
+def run_integrated_mode(
+    host, port, width, height, water_probability, num_coins, client_type="tui", debug=False
+):
+    """
+    Run the server in the background and a client in the foreground.
+
+    Args:
+        host: Host address to bind the server to
+        port: Port to bind the server to
+        width: Width of the game map
+        height: Height of the game map
+        water_probability: Probability of water tiles on the map
+        num_coins: Number of coins to place on the map
+        client_type: Type of client to run ("tui" or "text")
+        debug: Whether to enable debug logging
+    """
+    from game_server import GameServer
+
+    # Set debug logging if requested
+    if debug:
+        logger.setLevel(logging.DEBUG)
+
+    # Create the server
+    server = GameServer(
+        host=host,
+        port=port,
+        width=width,
+        height=height,
+        water_probability=water_probability,
+        num_coins=num_coins,
+    )
+
+    # Start the server in a background thread
+    server.start()
+    logger.info(f"Server started on {host}:{port}")
+
+    # Give the server a moment to initialize
+    time.sleep(1)
+
+    try:
+        # Start the appropriate client
+        if client_type == "tui":
+            logger.info("Starting TUI client...")
+            from client_tui import run_client_tui
+
+            run_client_tui(host=host, port=port)
+        else:
+            logger.info("Starting text client...")
+            run_standalone_text_client(host, port)
+
+    finally:
+        # Make sure to stop the server when the client exits
+        logger.info("Stopping server...")
+        server.stop()
 
 
 def main():
-    """Run the main game loop for playing GPT Generals with manual input."""
-    # Parse command-line arguments
-    parser = argparse.ArgumentParser(description="Play GPT Generals with manual control")
-    parser.add_argument("--width", type=int, default=10, help="Width of the map")
-    parser.add_argument("--height", type=int, default=10, help="Height of the map")
-    parser.add_argument("--water", type=float, default=0.2, help="Probability of water tiles")
-    parser.add_argument("--coins", type=int, default=5, help="Number of coins on the map")
-    parser.add_argument("--tui", action="store_true", help="Use terminal UI instead of text mode")
+    """Parse command-line arguments and run the appropriate mode."""
+    parser = argparse.ArgumentParser(description="GPT Generals Game")
+
+    # Mode selection
+    mode_group = parser.add_mutually_exclusive_group()
+    mode_group.add_argument("--server", action="store_true", help="Run in server-only mode")
+    mode_group.add_argument("--client", action="store_true", help="Run in client-only mode")
+
+    # General options
+    parser.add_argument("--host", default="localhost", help="Host address to use")
+    parser.add_argument("--port", type=int, default=8765, help="Port to use")
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
+
+    # Client options
+    client_group = parser.add_argument_group("Client options")
+    client_group.add_argument(
+        "--client-type",
+        choices=["text", "tui"],
+        default="tui",
+        help="Type of client interface (text or tui)",
+    )
+
+    # Server options
+    server_group = parser.add_argument_group("Server options")
+    server_group.add_argument("--width", type=int, default=10, help="Width of the map")
+    server_group.add_argument("--height", type=int, default=10, help="Height of the map")
+    server_group.add_argument("--water", type=float, default=0.2, help="Probability of water tiles")
+    server_group.add_argument("--coins", type=int, default=5, help="Number of coins on the map")
 
     args = parser.parse_args()
 
-    # Create game instance
-    game = GameEngine(
-        width=args.width,
-        height=args.height,
-        water_probability=args.water,
-        num_coins=args.coins,
-    )
-
-    # Check if we should use the TUI
-    if args.tui:
-        from player_tui import run_player_tui
-
-        run_player_tui(game)
-        return
-
-    # Create player controller for text mode
-    controller = PlayerController(game)
-
-    # Game loop
-    print("Welcome to GPT Generals!")
-    print("Controls: <unit_letter><direction> (e.g., 'Aw' to move unit A up)")
-    print("Directions: w/k (up), a/h (left), s/j (down), d/l (right)")
-    print("Type 'quit' or 'q' to exit")
-
-    coins_collected = 0
-    total_coins = len(game.coin_positions)
-
-    while True:
-        # Display game state
-        print(f"\nTurn {game.current_turn}:")
-        print(game.render_map())
-
-        # Display unit positions
-        print("\nUnit positions:")
-        for name, unit in game.units.items():
-            print(f"  Unit {name}: {unit.position}")
-
-        print(f"Coins remaining: {len(game.coin_positions)} / {total_coins}")
-
-        # Check win condition
-        if not game.coin_positions:
-            print("\nCongratulations! You've collected all coins.")
-            print(f"Game completed in {game.current_turn} turns.")
-            break
-
-        # Get player input
-        player_input = input("\nEnter move or 'q' to quit: ").strip().lower()
-
-        # Check for quit command
-        if player_input in ["q", "quit"]:
-            print("\nGame ended.")
-            print(f"Turns played: {game.current_turn}")
-            print(f"Coins collected: {total_coins - len(game.coin_positions)} / {total_coins}")
-            break
-
-        # Check for help command
-        if player_input in ["h", "help"]:
-            print("\nControls: <unit_letter><direction>")
-            print("  Unit letter: A, B, etc.")
-            print("  Direction: w/k (up), a/h (left), s/j (down), d/l (right)")
-            print(
-                "Examples: 'Aw' moves unit A up, 'Bd' moves unit B right, 'Al' moves unit A right"
-            )
-            print("Commands: 'q' to quit, 'h' for help")
-            continue
-
-        # Process input
-        if controller.process_input(player_input):
-            prev_coins = len(game.coin_positions)
-            # Check if a coin was collected this turn
-            if prev_coins > len(game.coin_positions):
-                print("Coin collected!")
-                coins_collected += 1
-
-            # Move was successful, advance to next turn
-            game.next_turn()
+    # Run in the appropriate mode
+    if args.server:
+        # Server-only mode
+        run_standalone_server(
+            host=args.host,
+            port=args.port,
+            width=args.width,
+            height=args.height,
+            water_probability=args.water,
+            num_coins=args.coins,
+            debug=args.debug,
+        )
+    elif args.client:
+        # Client-only mode
+        if args.client_type == "tui":
+            run_standalone_tui_client(args.host, args.port)
+        else:
+            run_standalone_text_client(args.host, args.port)
+    else:
+        # Integrated mode (default)
+        run_integrated_mode(
+            host=args.host,
+            port=args.port,
+            width=args.width,
+            height=args.height,
+            water_probability=args.water,
+            num_coins=args.coins,
+            client_type=args.client_type,
+            debug=args.debug,
+        )
 
 
 if __name__ == "__main__":
