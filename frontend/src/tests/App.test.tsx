@@ -10,16 +10,36 @@ const mockGameState = {
   turn: 1
 };
 
-const getGameStateMock = jest.fn().mockResolvedValue(mockGameState);
+const mockChatHistory = {
+  messages: []
+};
 
+const getGameStateMock = jest.fn().mockResolvedValue(mockGameState);
+const getChatHistoryMock = jest.fn().mockResolvedValue(mockChatHistory);
+const sendChatMessageMock = jest.fn().mockResolvedValue(true);
+
+// Mock the ChatPanel component to avoid JSDOM issues with scrollIntoView
+jest.mock('../components/ChatPanel', () => ({
+  ChatPanel: ({ playerName, height }) => (
+    <div data-testid="chat-panel" data-player-name={playerName} data-height={height}>
+      Chat Panel Mock
+    </div>
+  )
+}));
+
+// Mock the API functions
 jest.mock('../api', () => ({
-  getGameState: () => getGameStateMock()
+  getGameState: () => getGameStateMock(),
+  getChatHistory: () => getChatHistoryMock(),
+  sendChatMessage: (sender, content, senderType) => sendChatMessageMock(sender, content, senderType)
 }));
 
 describe('App', () => {
   beforeEach(() => {
     // Clear all mocks before each test
     getGameStateMock.mockClear();
+    getChatHistoryMock.mockClear();
+    sendChatMessageMock.mockClear();
   });
 
   it('renders the app title', () => {
@@ -49,5 +69,11 @@ describe('App', () => {
     await waitFor(() => {
       expect(getGameStateMock).toHaveBeenCalled();
     });
+  });
+  
+  it('includes the chat panel component', async () => {
+    render(<App />);
+    const chatPanel = await screen.findByTestId('chat-panel');
+    expect(chatPanel).toBeInTheDocument();
   });
 });
