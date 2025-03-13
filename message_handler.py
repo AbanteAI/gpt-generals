@@ -34,7 +34,8 @@ class ChatHistory:
 
     def __init__(self):
         """Initialize an empty chat history."""
-        # Store messages as ChatMessage objects or (sender, content) tuples for backward compatibility
+        # Store messages as ChatMessage objects or (sender, content) tuples
+        # for backward compatibility
         self.messages: List[Union[ChatMessage, Tuple[str, str]]] = []
 
         # Add a welcome message
