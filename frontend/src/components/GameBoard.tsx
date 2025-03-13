@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Grid } from '@mui/material';
+import { Box } from '@mui/material';
 import { GameState, TerrainType } from '../models';
 
 interface GameBoardProps {
@@ -8,6 +8,10 @@ interface GameBoardProps {
 
 export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
   const { mapGrid, units, coinPositions } = gameState;
+  
+  // Calculate grid dimensions
+  const gridHeight = mapGrid.length;
+  const gridWidth = gridHeight > 0 ? mapGrid[0].length : 0;
   
   const isUnitAtPosition = (x: number, y: number): string | null => {
     for (const unitKey in units) {
@@ -25,18 +29,30 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
   
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-      <Grid container spacing={0.5} sx={{ maxWidth: 'fit-content' }}>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${gridWidth}, 30px)`,
+          gridTemplateRows: `repeat(${gridHeight}, 30px)`,
+          gap: '2px',
+          backgroundColor: '#ccc',
+          padding: '2px',
+          border: '1px solid #999',
+        }}
+      >
         {mapGrid.map((row, y) => (
-          row.map((cell, x) => {
-            const unitName = isUnitAtPosition(x, y);
-            const hasCoin = isCoinAtPosition(x, y);
-            
-            return (
-              <Grid item key={`${x}-${y}`}>
+          // Use React Fragment as a container for each row to maintain grid structure
+          <React.Fragment key={`row-${y}`}>
+            {row.map((cell, x) => {
+              const unitName = isUnitAtPosition(x, y);
+              const hasCoin = isCoinAtPosition(x, y);
+              
+              return (
                 <Box
+                  key={`${x}-${y}`}
                   sx={{
-                    width: 30,
-                    height: 30,
+                    width: '100%',
+                    height: '100%',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -49,11 +65,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                 >
                   {unitName || (hasCoin ? 'c' : '')}
                 </Box>
-              </Grid>
-            );
-          })
+              );
+            })}
+          </React.Fragment>
         ))}
-      </Grid>
+      </Box>
     </Box>
   );
 };
