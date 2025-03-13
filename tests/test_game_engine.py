@@ -63,7 +63,7 @@ class TestGameEngine(unittest.TestCase):
 
         # Move in each direction
         directions = ["up", "right", "down", "left"]
-        expected_positions = [(2, 1), (3, 1), (3, 2), (2, 2)]
+        expected_positions = [(2, 3), (3, 3), (3, 2), (2, 2)]
 
         for direction, expected_pos in zip(directions, expected_positions, strict=False):
             success = game.move_unit("A", direction)
@@ -81,9 +81,9 @@ class TestGameEngine(unittest.TestCase):
         # Clear existing units and place unit at edge of map
         game.units = {"A": Unit(name="A", position=(0, 0))}
 
-        # Try to move left and up (out of bounds)
+        # Try to move left and down (out of bounds)
         self.assertFalse(game.move_unit("A", "left"))
-        self.assertFalse(game.move_unit("A", "up"))
+        self.assertFalse(game.move_unit("A", "down"))
 
         # Position should remain unchanged
         self.assertEqual(game.units["A"].position, (0, 0))

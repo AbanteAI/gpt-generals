@@ -55,7 +55,7 @@ def get_relative_direction(
 
     # Determine primary directions
     x_direction = "right" if x_diff > 0 else "left" if x_diff < 0 else ""
-    y_direction = "down" if y_diff > 0 else "up" if y_diff < 0 else ""
+    y_direction = "up" if y_diff > 0 else "down" if y_diff < 0 else ""
 
     # Combine directions
     if x_direction and y_direction:

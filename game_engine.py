@@ -123,10 +123,10 @@ class GameEngine:
 
         # Calculate new position based on direction
         new_x, new_y = x, y
-        if direction == "up" and y > 0:
-            new_y = y - 1
-        elif direction == "down" and y < self.height - 1:
+        if direction == "up" and y < self.height - 1:
             new_y = y + 1
+        elif direction == "down" and y > 0:
+            new_y = y - 1
         elif direction == "left" and x > 0:
             new_x = x - 1
         elif direction == "right" and x < self.width - 1:
