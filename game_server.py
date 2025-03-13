@@ -199,8 +199,9 @@ class GameServer:
         if game is None:
             game = self.game
 
-        # Convert TerrainType enum to string
-        map_grid_serialized = [[cell.value for cell in row] for row in game.map_grid]
+        # Convert TerrainType enum to string - use enum name instead of value
+        # This ensures the frontend gets "WATER" or "LAND" instead of "~" or "."
+        map_grid_serialized = [[cell.name for cell in row] for row in game.map_grid]
 
         # Convert units dictionary to serializable format
         units_serialized = {
