@@ -42,3 +42,4 @@ typeCheckingMode = "basic"
 pythonVersion = "3.11"
 strictParameterNoneValue = true
 reportMissingTypeStubs = false
+reportMissingImports = false  # Don't report missing imports
