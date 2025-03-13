@@ -13,6 +13,7 @@ import threading
 from typing import Any, Callable, Dict, List, Optional
 
 import websockets
+from websockets import WebSocketClientProtocol
 from websockets.exceptions import ConnectionClosed
 
 from game_engine import GameEngine, Unit
@@ -40,7 +41,7 @@ class GameClient:
         """
         self.host = host
         self.port = port
-        self.websocket: Optional[websockets.WebSocketClientProtocol] = None
+        self.websocket: Optional[WebSocketClientProtocol] = None
         self.client_thread: Optional[threading.Thread] = None
         self.running = False
         self.connected = False

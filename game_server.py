@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, Optional, Set
 
 import websockets
-from websockets.server import WebSocketServerProtocol
+from websockets import WebSocketServerProtocol
 
 from game_engine import GameEngine
 
