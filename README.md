@@ -13,7 +13,7 @@ GPT Generals is an innovative gaming project that integrates artificial intellig
 - Coin collection mechanics
 - LLM-powered unit movement for strategic gameplay
 - Client-server architecture supporting multiple clients
-- TUI (Terminal User Interface) and text-based clients
+- Text-based client
 
 ## Setup
 
@@ -33,7 +33,7 @@ The easiest way to play is to run the main script, which starts a server in the 
 python play_game.py
 ```
 
-This will start a TUI client by default. To use the text-based client instead:
+To explicitly specify the text-based client:
 
 ```bash
 python play_game.py --client-type text
@@ -71,15 +71,6 @@ python play_game.py --client --host example.com --port 8765
 ```
 
 ## Client Controls
-
-### TUI Client
-
-- Select a unit by pressing its letter (A, B, etc.)
-- Move selected unit with arrow keys or WASD
-- Press space to pause/resume
-- Press h for help
-- Press r to reset the game
-- Press q to quit
 
 ### Text Client
 
