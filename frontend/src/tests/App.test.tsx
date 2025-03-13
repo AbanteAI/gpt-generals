@@ -20,7 +20,7 @@ const sendChatMessageMock = jest.fn().mockResolvedValue(true);
 
 // Mock the ChatPanel component to avoid JSDOM issues with scrollIntoView
 jest.mock('../components/ChatPanel', () => ({
-  ChatPanel: ({ playerName, height }) => (
+  ChatPanel: ({ playerName, height }: { playerName?: string; height?: string | number }) => (
     <div data-testid="chat-panel" data-player-name={playerName} data-height={height}>
       Chat Panel Mock
     </div>
@@ -31,7 +31,11 @@ jest.mock('../components/ChatPanel', () => ({
 jest.mock('../api', () => ({
   getGameState: () => getGameStateMock(),
   getChatHistory: () => getChatHistoryMock(),
-  sendChatMessage: (sender, content, senderType) => sendChatMessageMock(sender, content, senderType)
+  sendChatMessage: (
+    sender: string, 
+    content: string, 
+    senderType: 'player' | 'system' | 'unit'
+  ) => sendChatMessageMock(sender, content, senderType)
 }));
 
 describe('App', () => {
