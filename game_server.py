@@ -92,6 +92,21 @@ class GameServer:
         client_id = id(websocket)
         logger.info(f"Client {client_id} connected. Total clients: {len(self.clients)}")
 
+        # Assign a player to this client if we have more than 2 players (the default)
+        if len(self.game.players) <= len(self.clients):
+            player_name = f"Player {len(self.clients)}"
+            player_id = self.game.add_player(player_name)
+
+            # Add a unit for the new player
+            try:
+                unit_name = self.game.add_unit(player_id)
+                logger.info(f"Added player {player_name} (ID: {player_id}) with unit {unit_name}")
+
+                # Associate the player ID with this websocket
+                websocket.player_id = player_id
+            except ValueError as e:
+                logger.warning(f"Could not add unit for new player: {e}")
+
         # Send the current game state to the new client
         await self.send_game_state(websocket)
 
@@ -113,14 +128,21 @@ class GameServer:
 
         # Convert units dictionary to serializable format
         units_serialized = {
-            name: {"name": unit.name, "position": unit.position}
+            name: {"name": unit.name, "position": unit.position, "player_id": unit.player_id}
             for name, unit in self.game.units.items()
+        }
+
+        # Convert players dictionary to serializable format
+        players_serialized = {
+            id: {"id": player.id, "name": player.name, "color": player.color}
+            for id, player in self.game.players.items()
         }
 
         return {
             "type": "game_state",
             "map_grid": map_grid_serialized,
             "units": units_serialized,
+            "players": players_serialized,
             "coin_positions": self.game.coin_positions,
             "current_turn": self.game.current_turn,
             "width": self.game.width,
@@ -188,7 +210,9 @@ class GameServer:
                     return
 
                 # Try to move the unit
-                success = self.game.move_unit(unit_name, direction)
+                # Get the player_id associated with this websocket if it exists
+                player_id = getattr(websocket, "player_id", None)
+                success = self.game.move_unit(unit_name, direction, player_id)
 
                 if success:
                     # If move was successful, advance turn

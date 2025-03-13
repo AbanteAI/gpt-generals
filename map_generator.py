@@ -93,6 +93,7 @@ class MapGenerator:
         map_grid: List[List[TerrainType]],
         unit_positions: Optional[dict] = None,
         coin_positions: Optional[List[Tuple[int, int]]] = None,
+        unit_colors: Optional[dict] = None,
     ) -> str:
         """
         Render a map as a string with optional units and coins.
@@ -101,6 +102,7 @@ class MapGenerator:
             map_grid: The map to render
             unit_positions: Dict mapping unit names to (x, y) positions (default None)
             coin_positions: List of (x, y) tuples for coin positions (default None)
+            unit_colors: Dict mapping unit names to color codes (default None)
 
         Returns:
             A string representation of the map
@@ -109,6 +111,8 @@ class MapGenerator:
             unit_positions = {}
         if coin_positions is None:
             coin_positions = []
+        if unit_colors is None:
+            unit_colors = {}
 
         width = len(map_grid[0])
         height = len(map_grid)
@@ -132,6 +136,7 @@ class MapGenerator:
                         break
 
                 if unit_at_pos:
+                    # This is just for terminal output, colors will be displayed in the frontend
                     row += unit_at_pos
                 elif (x, y) in coin_positions:
                     row += "c"
