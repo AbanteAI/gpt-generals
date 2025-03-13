@@ -382,6 +382,19 @@ class GameServer:
                 # Try to move the unit
                 # Get the player_id associated with this client
                 player_id = client_info.get("player_id")
+
+                # Ensure game is not None
+                if game is None:
+                    await websocket.send(
+                        json.dumps(
+                            {
+                                "type": "error",
+                                "message": "Game not found",
+                            }
+                        )
+                    )
+                    return
+
                 success = game.move_unit(unit_name, direction, player_id)
 
                 if success:
@@ -724,7 +737,13 @@ class GameServer:
             # Add all players in the room to the game
             player_ids = {}
             for player_id, player_info in room.players.items():
-                game_player_id = game.add_player(player_info["name"], player_info["color"])
+                # Add the player (add_player only takes a name parameter)
+                game_player_id = game.add_player(player_info["name"])
+
+                # Manually update the player's color after creation
+                if game_player_id in game.players:
+                    game.players[game_player_id].color = player_info["color"]
+
                 player_ids[player_id] = game_player_id
 
                 # Add a unit for the player
