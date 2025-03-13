@@ -253,13 +253,24 @@ export class GameClient {
       senderType: data.sender_type || 'player'
     };
     
-    // Add to chat history
-    this.chatHistory = {
-      messages: [...this.chatHistory.messages, message]
-    };
+    // Check for duplicates - avoid adding the same message twice
+    // This can happen when we send a message and then receive it back from the server
+    const isDuplicate = this.chatHistory.messages.some(existingMsg => 
+      existingMsg.sender === message.sender && 
+      existingMsg.content === message.content &&
+      // Allow for a small time difference (5 seconds) for messages that might have been added locally
+      Math.abs(existingMsg.timestamp - message.timestamp) < 5000
+    );
     
-    // Notify listeners
-    this.chatHistoryListeners.forEach(listener => listener(this.chatHistory));
+    if (!isDuplicate) {
+      // Add to chat history
+      this.chatHistory = {
+        messages: [...this.chatHistory.messages, message]
+      };
+      
+      // Notify listeners
+      this.chatHistoryListeners.forEach(listener => listener(this.chatHistory));
+    }
   }
 
   // Handle WebSocket close event
@@ -301,6 +312,14 @@ gameClient.connect();
 
 // Helper function for components that just want the current game state
 export async function getGameState(): Promise<GameState> {
+  // Create a default empty game state to use as fallback
+  const emptyState: GameState = {
+    mapGrid: [],
+    units: {},
+    coinPositions: [],
+    turn: 0
+  };
+  
   return new Promise<GameState>((resolve) => {
     const currentState = gameClient.getCurrentGameState();
     if (currentState) {
@@ -308,8 +327,9 @@ export async function getGameState(): Promise<GameState> {
       resolve(currentState);
     } else {
       // Otherwise subscribe and wait for the first update
-      const unsubscribe = gameClient.subscribeToGameState((state) => {
+      const unsubscribe = gameClient.subscribeToGameState((state: GameState) => {
         unsubscribe();
+        // Since we're explicitly typing the param as GameState, TypeScript knows it's not null
         resolve(state);
       });
       
@@ -323,12 +343,6 @@ export async function getGameState(): Promise<GameState> {
       // If we're having trouble getting a state, provide a fallback empty state after 5 seconds
       setTimeout(() => {
         if (!gameClient.getCurrentGameState()) {
-          const emptyState: GameState = {
-            mapGrid: [],
-            units: {},
-            coinPositions: [],
-            turn: 0
-          };
           resolve(emptyState);
         }
       }, 5000);
