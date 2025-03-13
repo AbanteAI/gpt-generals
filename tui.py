@@ -45,6 +45,7 @@ class SimulationTUI:
         curses.init_pair(4, curses.COLOR_RED, -1)  # Unit A
         curses.init_pair(5, curses.COLOR_MAGENTA, -1)  # Unit B
         curses.init_pair(6, curses.COLOR_WHITE, -1)  # Text
+        curses.init_pair(7, curses.COLOR_WHITE, curses.COLOR_BLACK)  # High contrast text
 
         # Clear screen and hide cursor
         self.stdscr.clear()
@@ -165,8 +166,8 @@ class SimulationTUI:
                 else:
                     display_msg = msg
                 self.stdscr.addstr(
-                    message_y + i, 2, display_msg, curses.color_pair(6)
-                )  # Use text color pair
+                    message_y + i, 2, display_msg, curses.color_pair(7)
+                )  # Use high contrast color pair
 
         self.stdscr.refresh()
 
