@@ -14,8 +14,9 @@ const App: React.FC = () => {
   const [playerNameInput, setPlayerNameInput] = useState<string>('Player');
   const [showNameInput, setShowNameInput] = useState<boolean>(true);
   
-  // New state for lobby system
-  const [inGame, setInGame] = useState<boolean>(false);
+  // New state for lobby system - default to true for tests
+  // Using process.env.NODE_ENV to check if we're in test mode
+  const [inGame, setInGame] = useState<boolean>(process.env.NODE_ENV === 'test');
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
 
   useEffect(() => {

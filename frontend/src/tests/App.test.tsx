@@ -23,6 +23,9 @@ jest.mock('../api', () => ({
     getCurrentChatHistory: jest.fn().mockReturnValue({
       messages: []
     }),
+    getCurrentLobbyState: jest.fn().mockReturnValue({
+      rooms: []
+    }),
     
     // Subscriptions with callbacks
     subscribeToGameState: jest.fn().mockImplementation(callback => {
@@ -40,11 +43,24 @@ jest.mock('../api', () => ({
       return jest.fn();
     }),
     
+    subscribeToLobbyState: jest.fn().mockImplementation(callback => {
+      callback({ rooms: [] }); // Simulate empty lobby
+      return jest.fn(); // Return unsubscribe function
+    }),
+    
     // Other methods
     isConnectionActive: jest.fn().mockReturnValue(true),
     connect: jest.fn(),
     requestGameState: jest.fn(),
-    sendChatMessage: jest.fn().mockResolvedValue(true)
+    requestLobbyState: jest.fn(),
+    sendChatMessage: jest.fn().mockResolvedValue(true),
+    
+    // Additional lobby-related methods
+    createRoom: jest.fn().mockResolvedValue(true),
+    joinRoom: jest.fn().mockResolvedValue(true),
+    leaveRoom: jest.fn().mockResolvedValue(true),
+    startGame: jest.fn().mockResolvedValue(true),
+    updatePlayerInfo: jest.fn().mockResolvedValue(true)
   }
 }));
 
@@ -53,6 +69,23 @@ jest.mock('../components/ChatPanel', () => ({
   ChatPanel: ({ playerName, height }: { playerName?: string; height?: string | number }) => (
     <div data-testid="chat-panel" data-player-name={playerName} data-height={height}>
       Chat Panel Mock
+    </div>
+  )
+}));
+
+// Mock the LobbyScreen component
+jest.mock('../components/LobbyScreen', () => ({
+  LobbyScreen: ({ 
+    playerName, 
+    onNameChange, 
+    onJoinGame 
+  }: { 
+    playerName: string; 
+    onNameChange: (name: string) => void;
+    onJoinGame: (roomId: string | null) => void;
+  }) => (
+    <div data-testid="lobby-screen" data-player-name={playerName}>
+      Lobby Screen Mock
     </div>
   )
 }));
