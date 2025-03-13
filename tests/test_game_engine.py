@@ -14,6 +14,11 @@ class TestGameEngine(unittest.TestCase):
         self.assertEqual(len(game.map_grid), 10)  # height
         self.assertEqual(len(game.map_grid[0]), 10)  # width
 
+        # Check players
+        self.assertEqual(len(game.players), 2)
+        self.assertIn("p0", game.players)
+        self.assertIn("p1", game.players)
+
         # Check units
         self.assertEqual(len(game.units), 2)
         self.assertIn("A", game.units)
@@ -23,6 +28,9 @@ class TestGameEngine(unittest.TestCase):
         for unit in game.units.values():
             x, y = unit.position
             self.assertEqual(game.map_grid[y][x], TerrainType.LAND)
+            # Check units have a player_id
+            self.assertTrue(hasattr(unit, "player_id"))
+            self.assertIn(unit.player_id, game.players)
 
         # Check coins
         self.assertEqual(len(game.coin_positions), 5)
@@ -58,17 +66,22 @@ class TestGameEngine(unittest.TestCase):
         custom_map = MapGenerator.generate_empty_map(5, 5)
         game = GameEngine(map_grid=custom_map)
 
+        # Get the first unit and its player
+        unit_name = "A"
+        unit = game.units[unit_name]
+        player_id = unit.player_id
+
         # Force unit positions for testing
-        game.units["A"].position = (2, 2)  # Center
+        unit.position = (2, 2)  # Center
 
         # Move in each direction
         directions = ["up", "right", "down", "left"]
         expected_positions = [(2, 3), (3, 3), (3, 2), (2, 2)]
 
         for direction, expected_pos in zip(directions, expected_positions, strict=False):
-            success = game.move_unit("A", direction)
+            success = game.move_unit(unit_name, direction, player_id)
             self.assertTrue(success)
-            self.assertEqual(game.units["A"].position, expected_pos)
+            self.assertEqual(game.units[unit_name].position, expected_pos)
 
     def test_invalid_movement(self):
         """Test that units cannot move into invalid positions."""
@@ -78,18 +91,21 @@ class TestGameEngine(unittest.TestCase):
 
         game = GameEngine(map_grid=custom_map)
 
+        # Add a player
+        player_id = game.add_player("Test Player")
+
         # Clear existing units and place unit at edge of map
-        game.units = {"A": Unit(name="A", position=(0, 0))}
+        game.units = {"A": Unit(name="A", position=(0, 0), player_id=player_id)}
 
         # Try to move left and down (out of bounds)
-        self.assertFalse(game.move_unit("A", "left"))
-        self.assertFalse(game.move_unit("A", "down"))
+        self.assertFalse(game.move_unit("A", "left", player_id))
+        self.assertFalse(game.move_unit("A", "down", player_id))
 
         # Position should remain unchanged
         self.assertEqual(game.units["A"].position, (0, 0))
 
         # Try to move right into water
-        self.assertFalse(game.move_unit("A", "right"))
+        self.assertFalse(game.move_unit("A", "right", player_id))
         self.assertEqual(game.units["A"].position, (0, 0))
 
     def test_coin_collection(self):
@@ -97,14 +113,19 @@ class TestGameEngine(unittest.TestCase):
         custom_map = MapGenerator.generate_empty_map(5, 5)
         game = GameEngine(map_grid=custom_map)
 
+        # Get the first unit and its player
+        unit_name = "A"
+        unit = game.units[unit_name]
+        player_id = unit.player_id
+
         # Clear existing coins and place one at a known location
         game.coin_positions = [(3, 3)]
 
         # Position unit adjacent to coin
-        game.units["A"].position = (2, 3)
+        unit.position = (2, 3)
 
         # Move to coin position
-        self.assertTrue(game.move_unit("A", "right"))
+        self.assertTrue(game.move_unit(unit_name, "right", player_id))
 
         # Verify coin was collected
         self.assertEqual(len(game.coin_positions), 0)
@@ -114,15 +135,20 @@ class TestGameEngine(unittest.TestCase):
         custom_map = MapGenerator.generate_empty_map(5, 5)
         game = GameEngine(map_grid=custom_map)
 
+        # Get the first unit and its player
+        unit_name = "A"
+        unit = game.units[unit_name]
+        player_id = unit.player_id
+
         # Position unit A at a location where it can move right
-        game.units["A"].position = (1, 1)
+        unit.position = (1, 1)
 
         # Clear any existing history and save the current state as initial
         game.history.clear()
         game._save_state()
 
         # Make a move and advance turn
-        move_success = game.move_unit("A", "right")
+        move_success = game.move_unit(unit_name, "right", player_id)
         self.assertTrue(move_success, "Unit A move right should succeed")
         game.next_turn()
 
@@ -134,7 +160,7 @@ class TestGameEngine(unittest.TestCase):
 
         # Check that unit positions are different in history
         self.assertNotEqual(
-            game.history[0].units["A"].position, game.history[1].units["A"].position
+            game.history[0].units[unit_name].position, game.history[1].units[unit_name].position
         )
 
     def test_map_rendering(self):
@@ -144,8 +170,15 @@ class TestGameEngine(unittest.TestCase):
 
         game = GameEngine(map_grid=custom_map)
 
+        # Add two players
+        player1_id = game.add_player("Player 1")
+        player2_id = game.add_player("Player 2")
+
         # Position units and coins at known locations
-        game.units = {"A": Unit(name="A", position=(1, 1)), "B": Unit(name="B", position=(3, 3))}
+        game.units = {
+            "A": Unit(name="A", position=(1, 1), player_id=player1_id),
+            "B": Unit(name="B", position=(3, 3), player_id=player2_id),
+        }
         game.coin_positions = [(2, 2), (4, 4)]
 
         # Render map
@@ -165,6 +198,37 @@ class TestGameEngine(unittest.TestCase):
         # Check coins - positions are reversed in the rendered map
         self.assertEqual(rendered_map[3][4], "c")  # Coin at (2,2)
         self.assertEqual(rendered_map[1][6], "c")  # Coin at (4,4)
+
+    def test_player_unit_ownership(self):
+        """Test that players can only move their own units."""
+        custom_map = MapGenerator.generate_empty_map(5, 5)
+        game = GameEngine(map_grid=custom_map)
+
+        # Get players
+        player1_id = "p0"  # First default player
+        player2_id = "p1"  # Second default player
+
+        # Ensure units belong to different players
+        unit_a = game.units["A"]
+        unit_b = game.units["B"]
+        unit_a.player_id = player1_id
+        unit_b.player_id = player2_id
+
+        # Position units for testing
+        unit_a.position = (1, 1)
+        unit_b.position = (3, 3)
+
+        # Player 1 should be able to move their own unit but not player 2's unit
+        self.assertTrue(game.move_unit("A", "right", player1_id))
+        self.assertFalse(game.move_unit("B", "right", player1_id))
+
+        # Player 2 should be able to move their own unit but not player 1's unit
+        self.assertTrue(game.move_unit("B", "left", player2_id))
+        self.assertFalse(game.move_unit("A", "up", player2_id))
+
+        # Check final positions
+        self.assertEqual(unit_a.position, (2, 1))  # Moved right by player 1
+        self.assertEqual(unit_b.position, (2, 3))  # Moved left by player 2
 
 
 if __name__ == "__main__":

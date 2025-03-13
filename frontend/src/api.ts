@@ -99,8 +99,8 @@ function getMockGameState(): GameState {
   
   // Create mock units
   const units: Record<string, Unit> = {
-    'A': { name: 'A', position: { x: 1, y: 1 } },
-    'B': { name: 'B', position: { x: 8, y: 8 } }
+    'A': { name: 'A', position: { x: 1, y: 1 }, player_id: 'p0' },
+    'B': { name: 'B', position: { x: 8, y: 8 }, player_id: 'p1' }
   };
   
   // Create mock coins
@@ -114,6 +114,10 @@ function getMockGameState(): GameState {
   return {
     mapGrid,
     units,
+    players: {
+      'p0': { id: 'p0', name: 'Player 1', color: '#F44336' },
+      'p1': { id: 'p1', name: 'Player 2', color: '#2196F3' }
+    },
     coinPositions,
     turn: Math.floor(Math.random() * 10) // Random turn number
   };
