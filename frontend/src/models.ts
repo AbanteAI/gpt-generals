@@ -38,3 +38,39 @@ export interface ChatMessage {
 export interface ChatHistory {
   messages: ChatMessage[];
 }
+
+// Lobby-related types
+export interface GameRoom {
+  id: string;
+  name: string;
+  hostId: string;
+  hostName: string;
+  players: LobbyPlayer[];
+  status: 'waiting' | 'playing' | 'finished';
+  createdAt: number;
+}
+
+export interface LobbyPlayer {
+  id: string;
+  name: string;
+  color: string;
+  isHost: boolean;
+}
+
+export interface LobbyState {
+  rooms: GameRoom[];
+  currentRoom: GameRoom | null;
+}
+
+// Available colors for players to choose from
+export const PLAYER_COLORS = [
+  '#F44336', // Red
+  '#2196F3', // Blue
+  '#4CAF50', // Green
+  '#FF9800', // Orange
+  '#9C27B0', // Purple
+  '#00BCD4', // Cyan
+  '#FFEB3B', // Yellow
+  '#795548', // Brown
+  '#607D8B'  // Blue Grey
+];

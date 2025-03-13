@@ -20,6 +20,10 @@ export class GameClient {
   private isConnected: boolean = false;
   private reconnectTimer: number | null = null;
 
+  // Store lobby state
+  private lobbyState: { rooms: any[] } = { rooms: [] };
+  private lobbyStateListeners: ((lobbyState: any) => void)[] = [];
+
   // Get the current game state
   public getCurrentGameState(): GameState {
     // Return a default empty state if no state is available
@@ -38,6 +42,11 @@ export class GameClient {
   // Get the current chat history
   public getCurrentChatHistory(): ChatHistory {
     return this.chatHistory;
+  }
+  
+  // Get the current lobby state
+  public getCurrentLobbyState() {
+    return this.lobbyState;
   }
 
   // Subscribe to game state changes
@@ -81,6 +90,19 @@ export class GameClient {
     };
   }
   
+  // Subscribe to lobby state changes
+  public subscribeToLobbyState(callback: (lobbyState: any) => void): () => void {
+    this.lobbyStateListeners.push(callback);
+    
+    // Call with current state immediately
+    callback(this.lobbyState);
+    
+    // Return unsubscribe function
+    return () => {
+      this.lobbyStateListeners = this.lobbyStateListeners.filter(cb => cb !== callback);
+    };
+  }
+  
   // Public method to check if connection is active
   public isConnectionActive(): boolean {
     return this.isConnected;
@@ -121,6 +143,169 @@ export class GameClient {
     };
     
     this.ws.send(JSON.stringify(message));
+  }
+  
+  // Request the current lobby state from the server
+  public requestLobbyState(): Promise<boolean> {
+    return new Promise((resolve) => {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        console.error('Cannot request lobby state: WebSocket is not connected');
+        resolve(false);
+        return;
+      }
+      
+      const message = {
+        command: 'get_lobby_state'
+      };
+      
+      try {
+        this.ws.send(JSON.stringify(message));
+        resolve(true);
+      } catch (error) {
+        console.error('Error requesting lobby state:', error);
+        resolve(false);
+      }
+    });
+  }
+  
+  // Create a new room in the lobby
+  public createRoom(
+    roomName: string, 
+    playerName: string, 
+    playerColor: string
+  ): Promise<boolean> {
+    return new Promise((resolve) => {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        console.error('Cannot create room: WebSocket is not connected');
+        resolve(false);
+        return;
+      }
+      
+      const message = {
+        command: 'lobby_create_room',
+        room_name: roomName,
+        player_name: playerName,
+        player_color: playerColor
+      };
+      
+      try {
+        this.ws.send(JSON.stringify(message));
+        resolve(true);
+      } catch (error) {
+        console.error('Error creating room:', error);
+        resolve(false);
+      }
+    });
+  }
+  
+  // Join an existing room
+  public joinRoom(
+    roomId: string, 
+    playerName: string, 
+    playerColor: string
+  ): Promise<boolean> {
+    return new Promise((resolve) => {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        console.error('Cannot join room: WebSocket is not connected');
+        resolve(false);
+        return;
+      }
+      
+      const message = {
+        command: 'lobby_join_room',
+        room_id: roomId,
+        player_name: playerName,
+        player_color: playerColor
+      };
+      
+      try {
+        this.ws.send(JSON.stringify(message));
+        resolve(true);
+      } catch (error) {
+        console.error('Error joining room:', error);
+        resolve(false);
+      }
+    });
+  }
+  
+  // Leave the current room
+  public leaveRoom(): Promise<boolean> {
+    return new Promise((resolve) => {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        console.error('Cannot leave room: WebSocket is not connected');
+        resolve(false);
+        return;
+      }
+      
+      const message = {
+        command: 'lobby_leave_room'
+      };
+      
+      try {
+        this.ws.send(JSON.stringify(message));
+        resolve(true);
+      } catch (error) {
+        console.error('Error leaving room:', error);
+        resolve(false);
+      }
+    });
+  }
+  
+  // Start the game in the current room
+  public startGame(): Promise<boolean> {
+    return new Promise((resolve) => {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        console.error('Cannot start game: WebSocket is not connected');
+        resolve(false);
+        return;
+      }
+      
+      const message = {
+        command: 'lobby_start_game'
+      };
+      
+      try {
+        this.ws.send(JSON.stringify(message));
+        resolve(true);
+      } catch (error) {
+        console.error('Error starting game:', error);
+        resolve(false);
+      }
+    });
+  }
+  
+  // Update player information (name, color)
+  public updatePlayerInfo(
+    playerName?: string, 
+    playerColor?: string
+  ): Promise<boolean> {
+    return new Promise((resolve) => {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        console.error('Cannot update player info: WebSocket is not connected');
+        resolve(false);
+        return;
+      }
+      
+      const message: any = {
+        command: 'lobby_set_player_info'
+      };
+      
+      if (playerName !== undefined) {
+        message.player_name = playerName;
+      }
+      
+      if (playerColor !== undefined) {
+        message.player_color = playerColor;
+      }
+      
+      try {
+        this.ws.send(JSON.stringify(message));
+        resolve(true);
+      } catch (error) {
+        console.error('Error updating player info:', error);
+        resolve(false);
+      }
+    });
   }
 
   // Send a chat message
@@ -217,12 +402,22 @@ export class GameClient {
         this.handleGameStateMessage(data);
       } else if (data.type === 'chat_message') {
         this.handleChatMessage(data);
+      } else if (data.type === 'lobby_state') {
+        this.handleLobbyStateMessage(data);
       } else if (data.type === 'error') {
         console.error('Server error:', data.message);
       }
     } catch (error) {
       console.error('Error parsing WebSocket message:', error);
     }
+  }
+  
+  // Handle lobby state messages
+  private handleLobbyStateMessage(data: any): void {
+    this.lobbyState = data;
+    
+    // Notify all listeners with the lobby state
+    this.lobbyStateListeners.forEach(listener => listener(this.lobbyState));
   }
 
   // Handle game state messages

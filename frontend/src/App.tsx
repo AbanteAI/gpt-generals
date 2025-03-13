@@ -3,6 +3,7 @@ import { Box, Container, Typography, Paper, Grid, TextField, Button, Chip, Alert
 import { GameState } from './models';
 import { GameBoard } from './components/GameBoard';
 import { ChatPanel } from './components/ChatPanel';
+import { LobbyScreen } from './components/LobbyScreen';
 import { gameClient } from './api';
 
 const App: React.FC = () => {
@@ -12,11 +13,19 @@ const App: React.FC = () => {
   const [playerName, setPlayerName] = useState<string>('Player');
   const [playerNameInput, setPlayerNameInput] = useState<string>('Player');
   const [showNameInput, setShowNameInput] = useState<boolean>(true);
+  
+  // New state for lobby system
+  const [inGame, setInGame] = useState<boolean>(false);
+  const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
 
   useEffect(() => {
     // Subscribe to game state updates
     const unsubscribeGameState = gameClient.subscribeToGameState((state) => {
       setGameState(state);
+      // If we receive a valid game state, we're in a game
+      if (state && state.mapGrid.length > 0) {
+        setInGame(true);
+      }
       // Clear any errors when we get new state
       setError(null);
     });
@@ -31,18 +40,45 @@ const App: React.FC = () => {
       }
     });
     
+    // Subscribe to lobby state updates
+    const unsubscribeLobbyState = gameClient.subscribeToLobbyState((lobbyState) => {
+      const currentRoom = lobbyState.rooms.find(room => room.id === currentRoomId);
+      
+      // If we have a current room ID but it's now in playing state, we're in a game
+      if (currentRoom && currentRoom.status === 'playing') {
+        setInGame(true);
+      }
+    });
+    
+    // Request initial lobby state
+    if (isConnected) {
+      gameClient.requestLobbyState();
+    }
+    
     // Clean up subscriptions on unmount
     return () => {
       unsubscribeGameState();
       unsubscribeConnection();
+      unsubscribeLobbyState();
     };
-  }, [error]);
+  }, [error, currentRoomId, isConnected]);
 
   const handleSetPlayerName = () => {
     if (playerNameInput.trim()) {
       setPlayerName(playerNameInput);
       setShowNameInput(false);
     }
+  };
+  
+  const handleJoinGame = (roomId: string | null) => {
+    setCurrentRoomId(roomId);
+    setInGame(true);
+  };
+  
+  const handleReturnToLobby = () => {
+    setInGame(false);
+    setCurrentRoomId(null);
+    gameClient.requestLobbyState();
   };
 
   return (
@@ -51,11 +87,22 @@ const App: React.FC = () => {
         <Typography variant="h3" component="h1">
           GPT Generals
         </Typography>
-        <Chip 
-          label={isConnected ? "Connected" : "Disconnected"} 
-          color={isConnected ? "success" : "error"} 
-          variant="outlined" 
-        />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          {inGame && (
+            <Button 
+              variant="outlined" 
+              color="secondary" 
+              onClick={handleReturnToLobby}
+            >
+              Return to Lobby
+            </Button>
+          )}
+          <Chip 
+            label={isConnected ? "Connected" : "Disconnected"} 
+            color={isConnected ? "success" : "error"} 
+            variant="outlined" 
+          />
+        </Box>
       </Box>
       
       <Typography variant="body1" paragraph>
@@ -66,7 +113,7 @@ const App: React.FC = () => {
       {showNameInput && (
         <Paper elevation={3} sx={{ p: 2, mb: 2 }}>
           <Typography variant="h6" gutterBottom>
-            Enter your name to start chatting
+            Enter your name to start
           </Typography>
           <Box sx={{ display: 'flex', gap: 1 }}>
             <TextField 
@@ -90,35 +137,47 @@ const App: React.FC = () => {
         </Alert>
       )}
       
-      <Grid container spacing={3}>
-        {/* Game Board Section */}
-        <Grid item xs={12} md={7}>
-          <Paper elevation={3} sx={{ p: 2 }}>
-            {gameState ? (
-              <>
-                <Typography variant="h6" sx={{ mb: 2 }}>
-                  Turn: {gameState.turn}
-                </Typography>
-                <GameBoard gameState={gameState} />
-              </>
-            ) : (
-              <Box sx={{ textAlign: 'center', py: 4 }}>
-                <Typography>
-                  {isConnected ? "Waiting for game state..." : "Connecting to server..."}
-                </Typography>
-              </Box>
-            )}
-          </Paper>
-        </Grid>
-        
-        {/* Chat Panel Section */}
-        <Grid item xs={12} md={5}>
-          <ChatPanel 
+      {!showNameInput && (
+        inGame ? (
+          // Game screen
+          <Grid container spacing={3}>
+            {/* Game Board Section */}
+            <Grid item xs={12} md={7}>
+              <Paper elevation={3} sx={{ p: 2 }}>
+                {gameState ? (
+                  <>
+                    <Typography variant="h6" sx={{ mb: 2 }}>
+                      Turn: {gameState.turn}
+                    </Typography>
+                    <GameBoard gameState={gameState} />
+                  </>
+                ) : (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography>
+                      {isConnected ? "Waiting for game state..." : "Connecting to server..."}
+                    </Typography>
+                  </Box>
+                )}
+              </Paper>
+            </Grid>
+            
+            {/* Chat Panel Section */}
+            <Grid item xs={12} md={5}>
+              <ChatPanel 
+                playerName={playerName}
+                height={500}
+              />
+            </Grid>
+          </Grid>
+        ) : (
+          // Lobby screen
+          <LobbyScreen 
             playerName={playerName}
-            height={500}
+            onNameChange={setPlayerName}
+            onJoinGame={handleJoinGame}
           />
-        </Grid>
-      </Grid>
+        )
+      )}
     </Container>
   );
 };
