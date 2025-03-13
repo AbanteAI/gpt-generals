@@ -77,7 +77,7 @@ class ChatHistory:
             content: The message content
         """
         self.messages.append(ChatMessage("system", content, "system"))
-        
+
     def add_move_message(self, content: str) -> None:
         """
         Add a movement message to the chat history.
