@@ -20,6 +20,7 @@ from typing import Any, Dict, Optional, Set
 import websockets
 
 from game_engine import GameEngine
+from map_generator import TerrainType
 
 # Configure logging
 logging.basicConfig(
