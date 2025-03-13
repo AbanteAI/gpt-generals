@@ -38,11 +38,11 @@ class ServerRestartHandler(FileSystemEventHandler):
     def on_any_event(self, event):
         """Handle any file system event."""
         # Skip directory events and hidden files
-        if event.is_directory or os.path.basename(event.src_path).startswith("."):
+        if event.is_directory or str(os.path.basename(event.src_path)).startswith("."):
             return
 
         # Skip if not a Python file
-        if not event.src_path.endswith(".py"):
+        if not str(event.src_path).endswith(".py"):
             return
 
         # Debounce multiple events
