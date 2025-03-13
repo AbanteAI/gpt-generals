@@ -132,28 +132,20 @@ describe('App', () => {
     expect(turnText).toBeInTheDocument();
   });
   
-  it('includes the game UI and chat panel component in test mode', async () => {
+  it('includes the game UI and chat panel component in test mode', () => {
     // Force component to show game UI by setting environment
     process.env.NODE_ENV = 'test';
     
-    // Create a custom render to ensure the chat panel is properly displayed
-    const { container } = render(
-      <div>
-        <App />
-        {/* Additional chat panel for testing */}
-        <div data-testid="chat-panel">Chat Panel Test</div>
-      </div>
-    );
+    // Render App component
+    render(<App />);
     
-    // Wait for everything to load
-    await waitFor(() => {
-      // Check that our test chat panel is in the document
-      const chatPanel = screen.getByTestId('chat-panel');
-      expect(chatPanel).toBeInTheDocument();
-      
-      // Also check that game UI is showing
-      const turnText = screen.getByText(/Turn: 1/i);
-      expect(turnText).toBeInTheDocument();
-    });
+    // Check that game UI is showing (Turn indicator)
+    const turnText = screen.getByText(/Turn: 1/i);
+    expect(turnText).toBeInTheDocument();
+    
+    // Check that chat panel is rendered from our mock
+    const chatPanels = screen.getAllByTestId('chat-panel');
+    expect(chatPanels.length).toBeGreaterThan(0);
+    expect(chatPanels[0]).toBeInTheDocument();
   });
 });
