@@ -233,7 +233,7 @@ class GameServer:
             Dictionary containing the current lobby state
         """
         rooms_serialized = []
-        for room_id, room in self.rooms.items():
+        for _room_id, room in self.rooms.items():
             rooms_serialized.append(
                 {
                     "id": room.id,
@@ -733,7 +733,7 @@ class GameServer:
                     logger.info(f"Added player {player_info['name']} with unit {unit_name}")
 
                     # Find the websocket for this player
-                    for ws, info in self.clients.items():
+                    for _ws, info in self.clients.items():
                         if info["id"] == player_id:
                             info["player_id"] = game_player_id
                             break
