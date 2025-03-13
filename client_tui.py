@@ -1,17 +1,33 @@
 #!/usr/bin/env python3
 """
-Text User Interface (TUI) for player-controlled GPT Generals game.
+Terminal User Interface client for GPT Generals game.
 
-This module provides a terminal-based interface for playing the GPT Generals
-game with real-time visualization and keyboard controls.
+This module implements a TUI client that connects to the game server
+and provides an interface for playing the game.
 """
 
 import curses
+import logging
 import time
 from typing import Optional
 
+from game_client import (
+    GameClient,
+    get_state_sync,
+    move_unit_sync,
+    reset_game_sync,
+    send_chat_message_sync,
+)
 from game_engine import GameEngine
-from player_controller import PlayerController
+from message_handler import ChatHistory, ChatMessage
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
 
 class ChatInput:
@@ -104,46 +120,41 @@ class ChatInput:
         self.window.move(self.y + 1, cursor_x)
 
 
-class PlayerTUI:
-    """Terminal User Interface for interactive gameplay of GPT Generals."""
+class ClientTUI:
+    """Terminal User Interface for the GPT Generals game client."""
 
-    def __init__(self, stdscr, game: GameEngine, manual_mode: bool = False):
+    def __init__(self, stdscr, client: GameClient, manual_mode: bool = False):
         """
-        Initialize the TUI for player-controlled gameplay.
+        Initialize the TUI client.
 
         Args:
             stdscr: The curses standard screen
-            game: The game engine instance
+            client: GameClient instance already connected to the server
             manual_mode: Whether to start in manual control mode (default False)
         """
         self.stdscr = stdscr
-        self.game = game
-        self.controller = PlayerController(game, manual_mode=manual_mode)
+        self.client = client
+        self.game: Optional[GameEngine] = None
         self.paused = False
         self.message: Optional[str] = None
         self.message_timeout = 0
+        self.active_unit: Optional[str] = None
+        self.total_coins = 0
+        self.is_game_over = False
+        self.manual_mode = manual_mode
+        self.chat_history = ChatHistory()
         self.chat_input: Optional[ChatInput] = None
-        self.chat_mode_active = False  # Flag to track if we're in chat input mode
+        self.chat_mode_active = False
+        self.player_name = "Player"  # Default player name
 
-        # Key mapping for unit selection and movement
-        self.unit_keys = {ord(k.lower()): k for k in game.units.keys()}
-        self.unit_keys.update({ord(k): k for k in game.units.keys()})
+        # Initialize curses
+        self._setup_curses()
 
-        self.direction_keys = {
-            curses.KEY_UP: "w",  # Up arrow
-            ord("w"): "w",  # W key (up)
-            ord("W"): "w",  # W key (up)
-            curses.KEY_DOWN: "s",  # Down arrow
-            ord("s"): "s",  # S key (down)
-            ord("S"): "s",  # S key (down)
-            curses.KEY_LEFT: "a",  # Left arrow
-            ord("a"): "a",  # A key (left)
-            ord("A"): "a",  # A key (left)
-            curses.KEY_RIGHT: "d",  # Right arrow
-            ord("d"): "d",  # D key (right)
-            ord("D"): "d",  # D key (right)
-        }
+        # Register callbacks for game state updates and chat messages
+        self._register_callbacks()
 
+    def _setup_curses(self):
+        """Initialize the curses environment."""
         # Initialize colors
         curses.start_color()
         curses.use_default_colors()
@@ -155,11 +166,10 @@ class PlayerTUI:
         curses.init_pair(6, curses.COLOR_WHITE, -1)  # Text
         curses.init_pair(7, curses.COLOR_GREEN, -1)  # Success messages
         curses.init_pair(8, curses.COLOR_RED, -1)  # Error messages
-        curses.init_pair(9, curses.COLOR_CYAN, -1)  # Chat messages
 
-        # Clear screen and set up cursor visibility
+        # Clear screen and hide cursor
         self.stdscr.clear()
-        curses.curs_set(0)  # Hide cursor initially
+        curses.curs_set(0)
 
         # Get screen dimensions
         self.height, self.width = self.stdscr.getmaxyx()
@@ -171,11 +181,67 @@ class PlayerTUI:
         # Enable keypad mode (for arrow keys)
         self.stdscr.keypad(True)
 
-        # Track active unit
-        self.active_unit: Optional[str] = None
+    def _register_callbacks(self):
+        """Register callbacks for game state updates and chat messages."""
 
-        # Total coins at start
-        self.total_coins = len(game.coin_positions)
+        # Callback for when game state is updated
+        def on_state_update(game):
+            self.game = game
+            if not hasattr(self, "total_coins") or self.total_coins == 0:
+                self.total_coins = len(game.coin_positions) + 0  # Make a copy
+
+            # Check for game over condition (all coins collected)
+            if len(game.coin_positions) == 0:
+                self.is_game_over = True
+                self.message = f"Congratulations! All coins collected in {game.current_turn} turns."
+                self.message_timeout = time.time() + 10  # Show for 10 seconds
+
+        # Callback for move results
+        def on_move_result(result):
+            success = result.get("success", False)
+            unit = result.get("unit_name", "Unknown")
+            direction = result.get("direction", "Unknown")
+
+            if success:
+                # Check if the active unit is the one that moved
+                if unit == self.active_unit:
+                    self.message = f"Unit {unit} moved {direction}"
+                else:
+                    self.message = f"Unit {unit} (controlled by another client) moved {direction}"
+            else:
+                self.message = f"Move failed: {unit} couldn't move {direction}"
+
+            self.message_timeout = time.time() + 2  # Show for 2 seconds
+
+        # Callback for chat messages
+        def on_chat_message(data):
+            sender = data.get("sender", "Unknown")
+            content = data.get("content", "")
+            sender_type = data.get("sender_type", "player")
+
+            # Create a ChatMessage and add it to our history
+            message = ChatMessage(sender, content, sender_type)
+            self.chat_history.add_message(message)
+
+            # Set a temporary message notification
+            if sender != self.player_name:  # Don't notify about our own messages
+                self.message = (
+                    f"New message from {sender}: {content[:20]}..."
+                    if len(content) > 20
+                    else f"New message from {sender}: {content}"
+                )
+                self.message_timeout = time.time() + 2  # Show for 2 seconds
+
+        # Callback for errors
+        def on_error(error):
+            self.message = f"Error: {error}"
+            self.message_timeout = time.time() + 5  # Show error for 5 seconds
+
+        # Register the callbacks
+        self.client.register_state_update_callback(on_state_update)
+        self.client.register_move_result_callback(on_move_result)
+        self.client.register_chat_message_callback(on_chat_message)
+        self.client.register_error_callback(on_error)
 
     def handle_input(self) -> bool:
         """
@@ -186,7 +252,7 @@ class PlayerTUI:
         """
         try:
             # If we're in chat input mode, handle differently
-            if self.chat_mode_active and not self.controller.manual_mode:
+            if self.chat_mode_active and not self.manual_mode:
                 return self.handle_chat_input()
 
             key = self.stdscr.getch()
@@ -201,46 +267,57 @@ class PlayerTUI:
                 self.show_help()
             elif key == ord("t") or key == ord("T"):
                 # Toggle between manual and chat modes
-                self.controller.toggle_mode()
-                mode_name = "manual" if self.controller.manual_mode else "chat"
+                self.manual_mode = not self.manual_mode
+                mode_name = "manual" if self.manual_mode else "chat"
                 self.message = f"Switched to {mode_name} mode"
                 self.message_timeout = time.time() + 2
             elif key == ord("c") or key == ord("C"):
                 # Enter chat input mode if we're in chat mode
-                if not self.controller.manual_mode:
+                if not self.manual_mode:
                     self.start_chat_input()
                     return True
-            elif self.controller.manual_mode and key in self.unit_keys:
-                # Manual mode: Select a unit
-                self.active_unit = self.unit_keys[key]
-                self.message = f"Unit {self.active_unit} selected"
-                self.message_timeout = time.time() + 2  # Show for 2 seconds
-            elif self.controller.manual_mode and self.active_unit and key in self.direction_keys:
-                # Manual mode: Move the active unit
-                direction_key = self.direction_keys[key]
-                command = f"{self.active_unit}{direction_key}"
-                success = self.controller.process_input(command)
+            elif key == ord("r") or key == ord("R"):
+                # Reset the game
+                reset_game_sync(self.client)
+                self.active_unit = None
+                self.is_game_over = False
+                self.message = "Game reset requested"
+                self.message_timeout = time.time() + 2
+            elif self.game and self.manual_mode:  # Only process game-specific inputs in manual mode
+                # Key mapping for unit selection
+                unit_keys = {}
+                for name in self.game.units.keys():
+                    unit_keys[ord(name.lower())] = name
+                    unit_keys[ord(name)] = name
 
-                if success:
-                    prev_coins = len(self.game.coin_positions)
-                    # Check if a coin was collected
-                    coins_collected = prev_coins > len(self.game.coin_positions)
+                # Direction keys mapping
+                direction_keys = {
+                    curses.KEY_UP: "up",
+                    ord("w"): "up",
+                    ord("W"): "up",
+                    curses.KEY_DOWN: "down",
+                    ord("s"): "down",
+                    ord("S"): "down",
+                    curses.KEY_LEFT: "left",
+                    ord("a"): "left",
+                    ord("A"): "left",
+                    curses.KEY_RIGHT: "right",
+                    ord("d"): "right",
+                    ord("D"): "right",
+                }
 
-                    if coins_collected:
-                        self.message = f"Unit {self.active_unit} collected a coin!"
-                    else:
-                        dir_name = self.controller.direction_map[direction_key]
-                        self.message = f"Unit {self.active_unit} moved {dir_name}"
-
-                    # Advance turn
-                    self.game.next_turn()
-                else:
-                    dir_name = self.controller.direction_map[direction_key]
-                    self.message = f"Move failed. Unit {self.active_unit} cannot move {dir_name}."
-
-                self.message_timeout = time.time() + 2  # Show for 2 seconds
-        except Exception:
-            pass
+                if key in unit_keys:
+                    # Select a unit
+                    self.active_unit = unit_keys[key]
+                    self.message = f"Unit {self.active_unit} selected"
+                    self.message_timeout = time.time() + 2  # Show for 2 seconds
+                elif self.active_unit and key in direction_keys:
+                    # Move the active unit
+                    direction = direction_keys[key]
+                    move_unit_sync(self.client, self.active_unit, direction)
+                    # Note: The move result will be handled by the callback
+        except Exception as e:
+            logger.error(f"Error handling input: {e}")
 
         return True
 
@@ -264,8 +341,8 @@ class PlayerTUI:
             if self.chat_input:
                 message = self.chat_input.handle_key(key)
                 if message is not None and message.strip():
-                    # Process the message
-                    self.controller.process_input(message)
+                    # Send the message
+                    send_chat_message_sync(self.client, self.player_name, message, "player")
                     self.exit_chat_input()
 
                 # Redraw input field
@@ -274,8 +351,8 @@ class PlayerTUI:
             # Make cursor visible in chat mode
             curses.curs_set(1)
 
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error handling chat input: {e}")
 
         return True
 
@@ -299,23 +376,34 @@ class PlayerTUI:
 
     def show_help(self):
         """Display help information."""
-        if self.controller.manual_mode:
-            self.message = "Manual Mode: Select unit, use arrows/WASD. T: toggle mode. Q: quit."
+        if self.manual_mode:
+            self.message = (
+                "Manual Mode: Select unit, use arrows/WASD. T: toggle mode. Q: quit. R: reset."
+            )
         else:
-            self.message = "Chat Mode: Press 'c' to enter a message. T: toggle mode. Q: quit."
+            self.message = (
+                "Chat Mode: Press C to enter a message. T: toggle mode. Q: quit. R: reset."
+            )
         self.message_timeout = time.time() + 5  # Show for 5 seconds
 
     def display_game(self):
         """Display the current game state."""
         self.stdscr.clear()
 
+        if not self.game:
+            # Display waiting message if we don't have a game state yet
+            wait_msg = "Waiting for game state from server..."
+            self.stdscr.addstr(self.height // 2, (self.width - len(wait_msg)) // 2, wait_msg)
+            self.stdscr.refresh()
+            return
+
         # Display title
         title = f"GPT Generals - Turn {self.game.current_turn}"
         self.stdscr.addstr(0, (self.width - len(title)) // 2, title, curses.A_BOLD)
 
         # Display controls
-        mode_name = "MANUAL" if self.controller.manual_mode else "CHAT"
-        controls = f"[q]uit | [t]oggle mode ({mode_name}) | [h]elp"
+        mode_name = "MANUAL" if self.manual_mode else "CHAT"
+        controls = f"[q]uit | [t]oggle mode ({mode_name}) | [h]elp | [r]eset"
         coins_remaining = len(self.game.coin_positions)
         status = (
             f"Status: {'PAUSED' if self.paused else 'Running'} | "
@@ -328,13 +416,13 @@ class PlayerTUI:
             self.stdscr.addstr(1, self.width - len(status) - 1, status)
 
         # Determine if we show chat pane
-        show_chat = not self.controller.manual_mode and self.width >= 80
+        show_chat = not self.manual_mode and self.width >= 80
 
         # Calculate map display area
         map_width = (self.width // 2) - 2 if show_chat else self.width - 4
 
         # Render the map with limited width
-        map_lines = self.render_map(max_width=map_width).split("\n")
+        map_lines = self._render_map(max_width=map_width).split("\n")
 
         # Display map
         start_y = 3
@@ -345,7 +433,7 @@ class PlayerTUI:
         # Display unit positions and active unit
         unit_info = []
         for name, unit in self.game.units.items():
-            if name == self.active_unit and self.controller.manual_mode:
+            if name == self.active_unit and self.manual_mode:
                 unit_info.append(f"► Unit {name}: {unit.position} ◄")
             else:
                 unit_info.append(f"Unit {name}: {unit.position}")
@@ -357,6 +445,17 @@ class PlayerTUI:
         unit_y = start_y + len(map_lines) + 1
         if unit_y < self.height - 4:
             self.stdscr.addstr(unit_y, 2, unit_text)
+
+        # Display connection status
+        conn_status = "Connected to server" if self.client.connected else "Disconnected"
+        conn_y = unit_y + 1
+        if conn_y < self.height - 3:
+            self.stdscr.addstr(
+                conn_y,
+                2,
+                conn_status,
+                curses.color_pair(7) if self.client.connected else curses.color_pair(8),
+            )
 
         # Display chat history in chat mode
         if show_chat:
@@ -398,7 +497,7 @@ class PlayerTUI:
         self.stdscr.addstr(self.height - 5, x, f"└{'─' * (width - 2)}┘")
 
         # Display chat messages
-        chat_history = self.controller.get_chat_history(max_messages=10)
+        chat_history = self.chat_history.format_chat_history(max_messages=10)
         messages = chat_history.split("\n")
 
         # Calculate available height for messages
@@ -417,14 +516,14 @@ class PlayerTUI:
                 msg_color = curses.color_pair(6)  # Default color
                 if msg.startswith("SYSTEM:"):
                     msg_color = curses.color_pair(8)
-                elif msg.startswith("YOU:"):
+                elif msg.startswith(f"{self.player_name}:"):
                     msg_color = curses.color_pair(7)
-                elif msg.startswith("UNIT"):
+                else:
                     msg_color = curses.color_pair(9)
 
                 self.stdscr.addstr(start_y + i + 1, x + 1, msg, msg_color)
 
-    def render_map(self, max_width: Optional[int] = None) -> str:
+    def _render_map(self, max_width: Optional[int] = None) -> str:
         """
         Create a string representation of the map.
 
@@ -434,6 +533,9 @@ class PlayerTUI:
         Returns:
             A string representation of the map
         """
+        if not self.game:
+            return "No map data available"
+
         height = len(self.game.map_grid)
         width = len(self.game.map_grid[0]) if height > 0 else 0
 
@@ -450,8 +552,8 @@ class PlayerTUI:
         header = "  " + "".join(f"{i % 10}" for i in range(visible_width))
         rows.append(header)
 
-        # Render map grid in reverse order
-        for y in range(height - 1, -1, -1):
+        # Render map grid
+        for y in range(height):
             row = f"{y % 10} "
             for x in range(visible_width):
                 # Check for units and coins at this position
@@ -476,74 +578,96 @@ class PlayerTUI:
     def run_game(self):
         """Run the main game loop with the TUI."""
         try:
-            # Show initial state
-            self.display_game()
+            # Request the initial game state
+            get_state_sync(self.client)
 
             # Main game loop
             while True:
-                # Check for win condition
-                if not self.game.coin_positions:
-                    turn_count = self.game.current_turn
-                    self.message = (
-                        f"Congratulations! You've collected all coins in {turn_count} turns."
-                    )
-                    self.message_timeout = time.time() + 10  # Show for 10 seconds
-                    self.display_game()
-                    time.sleep(3)  # Give time to see the message
-                    break
+                # Display the current game state
+                self.display_game()
 
                 # Handle input for game control
                 if not self.handle_input():
                     break
 
-                # Check if paused
-                if not self.paused:
-                    # Update display
+                # Check if game over and we should exit
+                if self.is_game_over:
+                    # Show game over for a bit then prompt to exit or restart
                     self.display_game()
+                    time.sleep(3)  # Give time to see the message
 
-                # Short delay for responsiveness without consuming too much CPU
+                    # Ask if they want to restart or exit
+                    self.stdscr.clear()
+                    mid_y = self.height // 2
+                    restart_msg = (
+                        "Game over! All coins collected. Press 'r' to restart or 'q' to quit."
+                    )
+                    self.stdscr.addstr(mid_y, (self.width - len(restart_msg)) // 2, restart_msg)
+                    self.stdscr.refresh()
+
+                    # Wait for either 'r' or 'q'
+                    self.stdscr.nodelay(False)  # Switch to blocking input
+                    while True:
+                        key = self.stdscr.getch()
+                        if key == ord("q") or key == ord("Q"):
+                            return  # Exit the game
+                        elif key == ord("r") or key == ord("R"):
+                            # Reset the game
+                            reset_game_sync(self.client)
+                            self.active_unit = None
+                            self.is_game_over = False
+                            self.stdscr.nodelay(True)  # Back to non-blocking
+                            break  # Continue the game loop
+
+                # Small delay for responsiveness
                 time.sleep(0.05)
-
-            # Game over, show final state
-            self.stdscr.clear()
-            end_message = (
-                "Game Over! All coins collected."
-                if not self.game.coin_positions
-                else "Game ended by player."
-            )
-            coins_remaining = len(self.game.coin_positions)
-            coins_collected = self.total_coins - coins_remaining
-            stats = (
-                f"Turns played: {self.game.current_turn} | "
-                f"Coins collected: {coins_collected}/{self.total_coins}"
-            )
-
-            mid_y = self.height // 2
-
-            def center_x(text):
-                return (self.width - len(text)) // 2
-
-            self.stdscr.addstr(mid_y - 1, center_x(end_message), end_message, curses.A_BOLD)
-            self.stdscr.addstr(mid_y + 1, center_x(stats), stats)
-            self.stdscr.addstr(mid_y + 3, (self.width - 20) // 2, "Press any key to exit")
-
-            self.stdscr.refresh()
-
-            # Wait for a keypress before exiting
-            self.stdscr.nodelay(False)
-            self.stdscr.getch()
 
         except KeyboardInterrupt:
             # Handle Ctrl+C gracefully
             pass
+        finally:
+            # Ensure we disconnect from the server
+            self.client.stop()
 
 
-def run_player_tui(game: GameEngine, manual_mode: bool = False):
+def run_client_tui(host: str = "localhost", port: int = 8765, manual_mode: bool = False):
     """
-    Run the player TUI with the provided game engine.
+    Run the TUI client connected to a server.
 
     Args:
-        game: The game engine instance to use
+        host: Server host address
+        port: Server port
         manual_mode: Whether to start in manual control mode (default False)
     """
-    curses.wrapper(lambda stdscr: PlayerTUI(stdscr, game, manual_mode).run_game())
+    # Create and start the client
+    client = GameClient(host=host, port=port)
+    client.start()
+
+    # Short delay to allow client to connect
+    time.sleep(1)
+
+    # Run the TUI with this client
+    try:
+        curses.wrapper(lambda stdscr: ClientTUI(stdscr, client, manual_mode).run_game())
+    finally:
+        # Make sure to stop the client
+        client.stop()
+        logger.info("Client stopped")
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="GPT Generals TUI Client")
+    parser.add_argument("--host", default="localhost", help="Server host address")
+    parser.add_argument("--port", type=int, default=8765, help="Server port")
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
+
+    args = parser.parse_args()
+
+    # Set log level
+    if args.debug:
+        logger.setLevel(logging.DEBUG)
+
+    # Run the TUI client
+    run_client_tui(host=args.host, port=args.port)
