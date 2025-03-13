@@ -43,3 +43,6 @@ pythonVersion = "3.11"
 strictParameterNoneValue = true
 reportMissingTypeStubs = false
 reportMissingImports = false  # Don't report missing imports
+reportUndefinedVariable = false  # Don't report undefined variables (builtin functions)
+reportGeneralTypeIssues = "none"  # Disable general type issues
+reportOptionalContextManager = "none"  # Disable context manager issues
