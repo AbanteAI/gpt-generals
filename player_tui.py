@@ -202,8 +202,8 @@ class PlayerTUI:
         header = "  " + "".join(f"{i % 10}" for i in range(width))
         rows.append(header)
 
-        # Render map grid
-        for y in range(height):
+        # Render map grid in reverse order
+        for y in range(height - 1, -1, -1):
             row = f"{y % 10} "
             for x in range(width):
                 # Check for units and coins at this position

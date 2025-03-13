@@ -118,7 +118,8 @@ class MapGenerator:
         header = "  " + "".join(f"{i % 10}" for i in range(width))
         result.append(header)
 
-        for y in range(height):
+        # Render map grid in reverse order (start from the highest row number)
+        for y in range(height - 1, -1, -1):
             # Add row number at the beginning of each row
             row = f"{y % 10} "
 
