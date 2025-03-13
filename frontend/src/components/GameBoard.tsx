@@ -1,6 +1,11 @@
-import React from 'react';
-import { Box } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, IconButton, Paper, Grid } from '@mui/material';
 import { GameState, TerrainType } from '../models';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import { moveUnit } from '../api';
 
 interface GameBoardProps {
   gameState: GameState;
@@ -8,6 +13,7 @@ interface GameBoardProps {
 
 export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
   const { mapGrid, units, coinPositions } = gameState;
+  const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
   
   // Calculate grid dimensions
   const gridHeight = mapGrid.length;
@@ -26,9 +32,22 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
   const isCoinAtPosition = (x: number, y: number): boolean => {
     return coinPositions.some(pos => pos.x === x && pos.y === y);
   };
+
+  const handleCellClick = (x: number, y: number) => {
+    const clickedUnit = isUnitAtPosition(x, y);
+    if (clickedUnit) {
+      setSelectedUnit(clickedUnit);
+    }
+  };
+
+  const handleMoveUnit = async (direction: 'up' | 'down' | 'left' | 'right') => {
+    if (selectedUnit) {
+      await moveUnit(selectedUnit, direction);
+    }
+  };
   
   return (
-    <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
       <Box
         data-testid="game-grid"
         sx={{
@@ -47,12 +66,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
             {row.map((cell, x) => {
               const unitName = isUnitAtPosition(x, y);
               const hasCoin = isCoinAtPosition(x, y);
+              const isSelected = unitName && unitName === selectedUnit;
               
               return (
                 <Box
                   key={`${x}-${y}`}
                   data-testid={`grid-cell-${x}-${y}`}
                   data-cell-type={unitName ? 'unit' : (hasCoin ? 'coin' : 'terrain')}
+                  onClick={() => handleCellClick(x, y)}
                   sx={{
                     width: '100%',
                     height: '100%',
@@ -62,8 +83,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                     backgroundColor: cell === TerrainType.LAND ? '#8BC34A' : '#2196F3',
                     ...(unitName && { backgroundColor: '#F44336' }),
                     ...(hasCoin && { backgroundColor: '#FFC107' }),
+                    ...(isSelected && { 
+                      border: '2px solid yellow',
+                      boxSizing: 'border-box'
+                    }),
                     fontWeight: 'bold',
                     color: unitName ? '#fff' : (hasCoin ? '#000' : undefined),
+                    cursor: unitName ? 'pointer' : 'default',
                   }}
                 >
                   {unitName || (hasCoin ? 'c' : '')}
@@ -73,6 +99,50 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
           </React.Fragment>
         ))}
       </Box>
+
+      {/* D-pad control */}
+      <Paper elevation={3} sx={{ p: 2, width: 'fit-content' }}>
+        <Grid container direction="column" alignItems="center" spacing={1}>
+          <Grid item>
+            <IconButton 
+              color="primary" 
+              onClick={() => handleMoveUnit('up')}
+              disabled={!selectedUnit}
+            >
+              <ArrowUpwardIcon />
+            </IconButton>
+          </Grid>
+          <Grid item container justifyContent="center" spacing={1}>
+            <Grid item>
+              <IconButton 
+                color="primary" 
+                onClick={() => handleMoveUnit('left')}
+                disabled={!selectedUnit}
+              >
+                <ArrowBackIcon />
+              </IconButton>
+            </Grid>
+            <Grid item>
+              <IconButton 
+                color="primary" 
+                onClick={() => handleMoveUnit('down')}
+                disabled={!selectedUnit}
+              >
+                <ArrowDownwardIcon />
+              </IconButton>
+            </Grid>
+            <Grid item>
+              <IconButton 
+                color="primary" 
+                onClick={() => handleMoveUnit('right')}
+                disabled={!selectedUnit}
+              >
+                <ArrowForwardIcon />
+              </IconButton>
+            </Grid>
+          </Grid>
+        </Grid>
+      </Paper>
     </Box>
   );
 };
