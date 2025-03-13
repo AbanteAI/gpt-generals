@@ -413,11 +413,11 @@ def main():
         print("\nGame state updated:")
         print(game.render_map())
         print(f"Turn: {game.current_turn}")
-        
+
         # Display units with positions
         units_str = ", ".join([f"{name} at {unit.position}" for name, unit in game.units.items()])
         print(f"Units: {units_str}")
-        
+
         print(f"Coins: {len(game.coin_positions)}")
 
     def on_move_result(result):
