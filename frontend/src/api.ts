@@ -229,8 +229,13 @@ export class GameClient {
   private handleGameStateMessage(data: any): void {
     // Convert terrain types from strings to enum values
     const mapGrid = data.map_grid.map((row: string[]) => 
-      row.map((cell: string) => cell === 'WATER' ? TerrainType.WATER : TerrainType.LAND)
+      row.map((cell: string) => {
+        // Check for both the enum name ('WATER') and the value ('~')
+        return (cell === 'WATER' || cell === '~') ? TerrainType.WATER : TerrainType.LAND;
+      })
     );
+    
+    // No debug logging needed
     
     // Convert unit positions to the expected format
     const units: Record<string, Unit> = {};

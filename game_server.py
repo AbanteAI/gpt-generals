@@ -114,8 +114,11 @@ class GameServer:
         Returns:
             Dictionary containing the current game state
         """
-        # Convert TerrainType enum to string
-        map_grid_serialized = [[cell.value for cell in row] for row in self.game.map_grid]
+        # Convert TerrainType enum to string - use enum name instead of value
+        # This ensures the frontend gets "WATER" or "LAND" instead of "~" or "."
+        map_grid_serialized = [[cell.name for cell in row] for row in self.game.map_grid]
+
+        # Remove debug logging
 
         # Convert units dictionary to serializable format
         units_serialized = {
