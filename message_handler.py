@@ -16,7 +16,7 @@ class ChatHistory:
     def __init__(self):
         """Initialize an empty chat history."""
         # Store messages as tuples of (sender, content)
-        # sender can be a unit name, "player", or "system"
+        # sender can be a unit name, "player", "system", or "move"
         self.messages: List[Tuple[str, str]] = []
 
         # Add a welcome message
@@ -49,6 +49,15 @@ class ChatHistory:
             content: The message content
         """
         self.messages.append(("system", content))
+
+    def add_move_message(self, content: str) -> None:
+        """
+        Add a movement message to the chat history.
+
+        Args:
+            content: The message content describing the movement
+        """
+        self.messages.append(("move", content))
 
     def get_last_n_messages(self, n: int) -> List[Tuple[str, str]]:
         """
@@ -87,6 +96,8 @@ class ChatHistory:
             return f"SYSTEM: {content}"
         elif sender == "player":
             return f"YOU: {content}"
+        elif sender == "move":
+            return f"MOVE: {content}"
         else:
             return f"UNIT {sender}: {content}"
 

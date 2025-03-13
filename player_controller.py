@@ -88,7 +88,10 @@ class PlayerController:
         # Try to move the unit
         success = self.game_engine.move_unit(unit_name, direction)
 
-        if not success:
+        if success:
+            # Add a movement message to chat history
+            self.chat_history.add_move_message(f"{unit_name} moved {direction}")
+        else:
             print(f"Move failed. Unit {unit_name} cannot move {direction}.")
 
         return success
