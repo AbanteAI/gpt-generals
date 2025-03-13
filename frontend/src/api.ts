@@ -319,6 +319,19 @@ export async function getGameState(): Promise<GameState> {
       } else {
         gameClient.requestGameState();
       }
+      
+      // If we're having trouble getting a state, provide a fallback empty state after 5 seconds
+      setTimeout(() => {
+        if (!gameClient.getCurrentGameState()) {
+          const emptyState: GameState = {
+            mapGrid: [],
+            units: {},
+            coinPositions: [],
+            turn: 0
+          };
+          resolve(emptyState);
+        }
+      }, 5000);
     }
   });
 }
