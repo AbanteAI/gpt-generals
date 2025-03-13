@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
   testPathIgnorePatterns: ['/node_modules/', '/dist/'],
@@ -14,6 +14,7 @@ module.exports = {
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
       tsconfig: 'tsconfig.json',
+      useESM: true
     }],
   },
 };
