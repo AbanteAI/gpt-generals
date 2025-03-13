@@ -22,11 +22,17 @@ class TestLLMMovement(unittest.TestCase):
         # Create a game with this map
         self.game = GameEngine(map_grid=self.test_map, num_coins=3)
 
+        # Get player IDs from the game
+        self.player1_id = "p0"
+        self.player2_id = "p1"
+
         # Override positions for predictable testing
         # Place unit A at (0,0) - top left
         self.game.units["A"].position = (0, 0)
+        self.game.units["A"].player_id = self.player1_id
         # Place unit B at (4,4) - bottom right
         self.game.units["B"].position = (4, 4)
+        self.game.units["B"].player_id = self.player2_id
 
         # Place coins at specific positions
         self.game.coin_positions = [(1, 0), (4, 0), (0, 4)]

@@ -9,6 +9,7 @@ export class GameClient {
   private gameState: GameState = {
     mapGrid: [],
     units: {},
+    players: {},
     coinPositions: [],
     turn: 0
   };
@@ -26,6 +27,7 @@ export class GameClient {
       return {
         mapGrid: [],
         units: {},
+        players: {},
         coinPositions: [],
         turn: 0
       };
@@ -235,7 +237,8 @@ export class GameClient {
     Object.entries(data.units).forEach(([key, value]: [string, any]) => {
       units[key] = {
         name: value.name,
-        position: { x: value.position[0], y: value.position[1] }
+        position: { x: value.position[0], y: value.position[1] },
+        player_id: value.player_id || 'p0' // Default to player 0 if not provided
       };
     });
     
@@ -244,10 +247,17 @@ export class GameClient {
       (pos: [number, number]) => ({ x: pos[0], y: pos[1] })
     );
     
+    // Convert players or create default players if not provided
+    const players = data.players || {
+      'p0': { id: 'p0', name: 'Player 1', color: '#F44336' },
+      'p1': { id: 'p1', name: 'Player 2', color: '#2196F3' }
+    };
+    
     // Create new game state
     this.gameState = {
       mapGrid,
       units,
+      players,
       coinPositions,
       turn: data.current_turn
     };
@@ -384,4 +394,73 @@ export async function moveUnit(
   direction: 'up' | 'down' | 'left' | 'right'
 ): Promise<boolean> {
   return gameClient.moveUnit(unitName, direction);
+}
+
+// Mock function to get game state (fallback)
+function getMockGameState(): GameState {
+  // Generate a mock game state
+  const width = 10;
+  const height = 10;
+  
+  // Create a random map with land and water
+  const mapGrid: TerrainType[][] = [];
+  for (let y = 0; y < height; y++) {
+    const row: TerrainType[] = [];
+    for (let x = 0; x < width; x++) {
+      // 20% chance of water
+      row.push(Math.random() < 0.2 ? TerrainType.WATER : TerrainType.LAND);
+    }
+    mapGrid.push(row);
+  }
+  
+  // Create mock units
+  const units: Record<string, Unit> = {
+    'A': { name: 'A', position: { x: 1, y: 1 }, player_id: 'p0' },
+    'B': { name: 'B', position: { x: 8, y: 8 }, player_id: 'p1' }
+  };
+  
+  // Create mock coins
+  const coinPositions: Position[] = [
+    { x: 3, y: 3 },
+    { x: 5, y: 7 },
+    { x: 7, y: 2 }
+  ];
+  
+  // Create mock game state
+  return {
+    mapGrid,
+    units,
+    players: {
+      'p0': { id: 'p0', name: 'Player 1', color: '#F44336' },
+      'p1': { id: 'p1', name: 'Player 2', color: '#2196F3' }
+    },
+    coinPositions,
+    turn: Math.floor(Math.random() * 10) // Random turn number
+  };
+}
+
+// Mock function to get chat history (for testing)
+export function getMockChatHistory(): ChatHistory {
+  return {
+    messages: [
+      {
+        sender: 'System',
+        content: 'Welcome to GPT Generals!',
+        timestamp: Date.now() - 60000,
+        senderType: 'system'
+      },
+      {
+        sender: 'Player1',
+        content: 'Hello everyone!',
+        timestamp: Date.now() - 45000,
+        senderType: 'player'
+      },
+      {
+        sender: 'Unit A',
+        content: 'I\'m heading to the coin at (3,3)',
+        timestamp: Date.now() - 30000,
+        senderType: 'unit'
+      }
+    ]
+  };
 }

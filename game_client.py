@@ -144,10 +144,24 @@ class GameClient:
         game.width = state_data["width"]
         game.height = state_data["height"]
 
+        # Clear and set players first (needed for units)
+        game.players = {}
+        if "players" in state_data:
+            for player_id, player_data in state_data["players"].items():
+                from game_engine import Player
+
+                game.players[player_id] = Player(
+                    id=player_data["id"], name=player_data["name"], color=player_data["color"]
+                )
+
         # Clear and set units
         game.units = {}
         for name, unit_data in state_data["units"].items():
-            game.units[name] = Unit(name=unit_data["name"], position=tuple(unit_data["position"]))
+            # If the server provides a player_id, use it
+            player_id = unit_data.get("player_id", "p0")
+            game.units[name] = Unit(
+                name=unit_data["name"], position=tuple(unit_data["position"]), player_id=player_id
+            )
 
         # Set coin positions
         game.coin_positions = [tuple(pos) for pos in state_data["coin_positions"]]
@@ -284,18 +298,26 @@ class GameClient:
             logger.error(f"Failed to send command: {e}")
             return False
 
-    async def move_unit(self, unit_name: str, direction: str) -> bool:
+    async def move_unit(
+        self, unit_name: str, direction: str, player_id: Optional[str] = None
+    ) -> bool:
         """
         Send a move command to the server.
 
         Args:
             unit_name: Name of the unit to move
             direction: Direction to move ('up', 'down', 'left', 'right')
+            player_id: Optional player ID. If not provided, the server will verify ownership.
 
         Returns:
             True if command was sent successfully, False otherwise
         """
         command = {"command": "move", "unit_name": unit_name, "direction": direction}
+
+        # Add player_id to the command if provided
+        if player_id is not None:
+            command["player_id"] = player_id
+
         return await self.send_command(command)
 
     async def send_chat_message(
@@ -384,7 +406,9 @@ class GameClient:
 
 
 # Simple synchronous wrapper functions for easier use in synchronous code
-def move_unit_sync(client: GameClient, unit_name: str, direction: str) -> bool:
+def move_unit_sync(
+    client: GameClient, unit_name: str, direction: str, player_id: Optional[str] = None
+) -> bool:
     """
     Synchronous wrapper for move_unit.
 
@@ -392,13 +416,14 @@ def move_unit_sync(client: GameClient, unit_name: str, direction: str) -> bool:
         client: GameClient instance
         unit_name: Name of the unit to move
         direction: Direction to move
+        player_id: Optional player ID
 
     Returns:
         True if command was sent successfully, False otherwise
     """
     loop = asyncio.new_event_loop()
     try:
-        return loop.run_until_complete(client.move_unit(unit_name, direction))
+        return loop.run_until_complete(client.move_unit(unit_name, direction, player_id))
     finally:
         loop.close()
 
