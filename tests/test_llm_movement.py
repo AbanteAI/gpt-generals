@@ -45,9 +45,13 @@ class TestLLMMovement(unittest.TestCase):
         self.assertEqual(move.direction, Direction.UP)
         self.assertEqual(move.reasoning, "Moving up to collect a coin")
 
-        # Test invalid direction
+        # Test invalid direction with string
         with self.assertRaises(ValueError):
             MoveDecision(direction="diagonal", reasoning="Invalid direction")
+
+        # Alternative test with invalid enum type (if needed)
+        # with self.assertRaises(TypeError):
+        #     MoveDecision(direction=5, reasoning="Invalid direction type")
 
     def test_game_state_description(self):
         """Test the game state description generation."""
