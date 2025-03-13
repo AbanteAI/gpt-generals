@@ -1,8 +1,7 @@
 import React from 'react';
 import { render, screen, act, waitFor } from '@testing-library/react';
-import App from '../App';
 
-// Mock the API call
+// Define mock game state with player data
 const mockGameState = {
   mapGrid: [[0, 0], [0, 0]],
   units: { 'A': { name: 'A', position: { x: 0, y: 0 }, player_id: 'p0' } },
@@ -11,13 +10,43 @@ const mockGameState = {
   turn: 1
 };
 
-const mockChatHistory = {
-  messages: []
-};
-
-const getGameStateMock = jest.fn().mockResolvedValue(mockGameState);
-const getChatHistoryMock = jest.fn().mockResolvedValue(mockChatHistory);
-const sendChatMessageMock = jest.fn().mockResolvedValue(true);
+// Set up Jest mocks before imports
+// Mock the API module
+jest.mock('../api', () => ({
+  getGameState: jest.fn().mockResolvedValue(mockGameState),
+  getChatHistory: jest.fn().mockResolvedValue({ messages: [] }),
+  sendChatMessage: jest.fn().mockResolvedValue(true),
+  
+  // Mock the gameClient object that App.tsx uses
+  gameClient: {
+    getCurrentGameState: jest.fn().mockReturnValue(mockGameState),
+    getCurrentChatHistory: jest.fn().mockReturnValue({
+      messages: []
+    }),
+    
+    // Subscriptions with callbacks
+    subscribeToGameState: jest.fn().mockImplementation(callback => {
+      callback(mockGameState);
+      return jest.fn(); // Return unsubscribe function
+    }),
+    
+    subscribeToChatHistory: jest.fn().mockImplementation(callback => {
+      callback({ messages: [] });
+      return jest.fn();
+    }),
+    
+    subscribeToConnectionState: jest.fn().mockImplementation(callback => {
+      callback(true); // Simulate connected state
+      return jest.fn();
+    }),
+    
+    // Other methods
+    isConnectionActive: jest.fn().mockReturnValue(true),
+    connect: jest.fn(),
+    requestGameState: jest.fn(),
+    sendChatMessage: jest.fn().mockResolvedValue(true)
+  }
+}));
 
 // Mock the ChatPanel component to avoid JSDOM issues with scrollIntoView
 jest.mock('../components/ChatPanel', () => ({
@@ -28,16 +57,14 @@ jest.mock('../components/ChatPanel', () => ({
   )
 }));
 
-// Mock the API functions
-jest.mock('../api', () => ({
-  getGameState: () => getGameStateMock(),
-  getChatHistory: () => getChatHistoryMock(),
-  sendChatMessage: (
-    sender: string, 
-    content: string, 
-    senderType: 'player' | 'system' | 'unit'
-  ) => sendChatMessageMock(sender, content, senderType)
-}));
+// Import after jest mocks are defined
+import App from '../App';
+import { getGameState, getChatHistory, sendChatMessage } from '../api';
+
+// Create spies for tracking calls to the mocked functions
+const getGameStateMock = getGameState as jest.Mock;
+const getChatHistoryMock = getChatHistory as jest.Mock;
+const sendChatMessageMock = sendChatMessage as jest.Mock;
 
 describe('App', () => {
   beforeEach(() => {
@@ -53,10 +80,10 @@ describe('App', () => {
     expect(titleElement).toBeInTheDocument();
   });
 
-  it('shows loading state initially', () => {
+  it('displays the game state immediately with our mock', () => {
     render(<App />);
-    const loadingElement = screen.getByText(/Loading game state/i);
-    expect(loadingElement).toBeInTheDocument();
+    const turnText = screen.getByText(/Turn: 1/i);
+    expect(turnText).toBeInTheDocument();
   });
 
   it('displays turn number after loading', async () => {
@@ -69,11 +96,6 @@ describe('App', () => {
     
     // Assert
     expect(turnText).toBeInTheDocument();
-    
-    // Verify mock was called
-    await waitFor(() => {
-      expect(getGameStateMock).toHaveBeenCalled();
-    });
   });
   
   it('includes the chat panel component', async () => {

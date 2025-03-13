@@ -1,6 +1,6 @@
 import argparse
 import random
-from typing import NamedTuple, Optional, Tuple
+from typing import NamedTuple, Optional
 
 from pydantic import BaseModel, Field
 
@@ -28,14 +28,14 @@ class MoveDecisionResponse(NamedTuple):
     raw_response: str
 
 
-def calculate_manhattan_distance(pos1: Tuple[int, int], pos2: Tuple[int, int]) -> int:
+def calculate_manhattan_distance(pos1: tuple[int, int], pos2: tuple[int, int]) -> int:
     """Calculate Manhattan distance between two positions."""
     return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
 
 
 def get_relative_direction(
-    from_pos: Tuple[int, int], to_pos: Tuple[int, int]
-) -> Tuple[str, int, int]:
+    from_pos: tuple[int, int], to_pos: tuple[int, int]
+) -> tuple[str, int, int]:
     """
     Get the relative direction from one position to another.
 

@@ -51,21 +51,27 @@ def run_standalone_server(host, port, width, height, water_probability, num_coin
     """Run a server in standalone mode."""
     import asyncio
 
+    from game_engine import GameEngine
     from game_server import GameServer
 
-    # Create and start the server
-    server = GameServer(
-        host=host,
-        port=port,
+    # Set debug logging if requested
+    if debug:
+        logger.setLevel(logging.DEBUG)
+
+    # Create a game engine first
+    game_engine = GameEngine(
         width=width,
         height=height,
         water_probability=water_probability,
         num_coins=num_coins,
     )
 
-    # Set debug logging if requested
-    if debug:
-        logger.setLevel(logging.DEBUG)
+    # Create and start the server with the game engine
+    server = GameServer(
+        game=game_engine,
+        host=host,
+        port=port,
+    )
 
     # Run the server in the main thread
     logger.info(f"Starting server on {host}:{port}")
@@ -97,20 +103,26 @@ def run_integrated_mode(
         manual_mode: Whether to use manual control mode (default False)
         debug: Whether to enable debug logging
     """
+    from game_engine import GameEngine
     from game_server import GameServer
 
     # Set debug logging if requested
     if debug:
         logger.setLevel(logging.DEBUG)
 
-    # Create the server
-    server = GameServer(
-        host=host,
-        port=port,
+    # Create a game engine first
+    game_engine = GameEngine(
         width=width,
         height=height,
         water_probability=water_probability,
         num_coins=num_coins,
+    )
+
+    # Create the server with the game engine
+    server = GameServer(
+        game=game_engine,
+        host=host,
+        port=port,
     )
 
     # Start the server in a background thread

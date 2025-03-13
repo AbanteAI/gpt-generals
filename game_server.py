@@ -45,38 +45,29 @@ class GameServer:
 
     def __init__(
         self,
+        game: GameEngine,
         host: str = "localhost",
         port: int = 8765,
-        width: int = 10,
-        height: int = 10,
-        water_probability: float = 0.2,
-        num_coins: int = 5,
     ):
         """
         Initialize the game server.
 
         Args:
+            game: GameEngine instance to use for the game
             host: Host address to bind the server to
             port: Port to bind the server to
-            width: Width of the game map
-            height: Height of the game map
-            water_probability: Probability of water tiles on the map
-            num_coins: Number of coins to place on the map
         """
         self.host = host
         self.port = port
-        self.width = width
-        self.height = height
-        self.water_probability = water_probability
-        self.num_coins = num_coins
 
-        # Initialize game
-        self.game = GameEngine(
-            width=width,
-            height=height,
-            water_probability=water_probability,
-            num_coins=num_coins,
-        )
+        # Store the game engine
+        self.game = game
+
+        # Store game parameters for reset
+        self.width = game.width
+        self.height = game.height
+        self.water_probability = 0.2  # Default value
+        self.num_coins = len(game.coin_positions)
 
         # Keep track of connected clients
         self.clients: Set["websockets.WebSocketServerProtocol"] = set()
@@ -298,12 +289,13 @@ class GameServer:
 
             elif command == "reset":
                 # Reset the game with the same settings
-                self.game = GameEngine(
+                new_game = GameEngine(
                     width=self.width,
                     height=self.height,
                     water_probability=self.water_probability,
                     num_coins=self.num_coins,
                 )
+                self.game = new_game
 
                 # Broadcast the new game state to all clients
                 await self.send_game_state()
@@ -435,14 +427,19 @@ def main():
     if args.debug:
         logger.setLevel(logging.DEBUG)
 
-    # Create and start the server
-    server = GameServer(
-        host=args.host,
-        port=args.port,
+    # Create a game engine first
+    game_engine = GameEngine(
         width=args.width,
         height=args.height,
         water_probability=args.water,
         num_coins=args.coins,
+    )
+
+    # Create and start the server with the game engine
+    server = GameServer(
+        game=game_engine,
+        host=args.host,
+        port=args.port,
     )
 
     # Run the server in the main thread
