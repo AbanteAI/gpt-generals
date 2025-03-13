@@ -11,8 +11,15 @@ import logging
 import time
 from typing import Optional
 
-from game_client import GameClient, get_state_sync, move_unit_sync, reset_game_sync
+from game_client import (
+    GameClient,
+    get_state_sync,
+    move_unit_sync,
+    reset_game_sync,
+    send_chat_message_sync,
+)
 from game_engine import GameEngine
+from message_handler import ChatHistory, ChatMessage
 
 # Configure logging
 logging.basicConfig(
@@ -23,16 +30,107 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+class ChatInput:
+    """A simple text input widget for chat messages."""
+
+    def __init__(self, window, y: int, x: int, width: int):
+        """
+        Initialize the chat input widget.
+
+        Args:
+            window: The curses window to draw in
+            y: Y position
+            x: X position
+            width: Width of the input field
+        """
+        self.window = window
+        self.y = y
+        self.x = x
+        self.width = width
+        self.buffer = ""
+        self.cursor_pos = 0
+        self.visible_start = 0
+
+    def handle_key(self, key: int) -> Optional[str]:
+        """
+        Handle key input for the chat widget.
+
+        Args:
+            key: Key code from curses
+
+        Returns:
+            The submitted text if Enter was pressed, None otherwise
+        """
+        if key == curses.KEY_ENTER or key == 10 or key == 13:  # Enter
+            result = self.buffer
+            self.buffer = ""
+            self.cursor_pos = 0
+            self.visible_start = 0
+            return result
+        elif key == curses.KEY_BACKSPACE or key == 127 or key == 8:  # Backspace
+            if self.cursor_pos > 0:
+                self.buffer = self.buffer[: self.cursor_pos - 1] + self.buffer[self.cursor_pos :]
+                self.cursor_pos -= 1
+                if self.visible_start > 0 and self.cursor_pos < self.visible_start:
+                    self.visible_start -= 1
+        elif key == curses.KEY_DC:  # Delete
+            if self.cursor_pos < len(self.buffer):
+                self.buffer = self.buffer[: self.cursor_pos] + self.buffer[self.cursor_pos + 1 :]
+        elif key == curses.KEY_LEFT:  # Left arrow
+            if self.cursor_pos > 0:
+                self.cursor_pos -= 1
+                if self.visible_start > 0 and self.cursor_pos < self.visible_start:
+                    self.visible_start -= 1
+        elif key == curses.KEY_RIGHT:  # Right arrow
+            if self.cursor_pos < len(self.buffer):
+                self.cursor_pos += 1
+                if self.cursor_pos >= self.visible_start + self.width - 2:
+                    self.visible_start += 1
+        elif key == curses.KEY_HOME:  # Home
+            self.cursor_pos = 0
+            self.visible_start = 0
+        elif key == curses.KEY_END:  # End
+            self.cursor_pos = len(self.buffer)
+            if self.cursor_pos >= self.width - 2:
+                self.visible_start = self.cursor_pos - (self.width - 3)
+        elif 32 <= key <= 126:  # Printable ASCII characters
+            self.buffer = self.buffer[: self.cursor_pos] + chr(key) + self.buffer[self.cursor_pos :]
+            self.cursor_pos += 1
+            if self.cursor_pos >= self.visible_start + self.width - 2:
+                self.visible_start += 1
+
+        return None
+
+    def draw(self):
+        """Draw the input field with current text and cursor."""
+        # Calculate visible portion of text
+        visible_text = self.buffer[self.visible_start : self.visible_start + self.width - 2]
+
+        # Draw input field border and content
+        self.window.addstr(self.y, self.x, "┌" + "─" * (self.width - 2) + "┐")
+        self.window.addstr(self.y + 1, self.x, "│" + " " * (self.width - 2) + "│")
+        self.window.addstr(self.y + 2, self.x, "└" + "─" * (self.width - 2) + "┘")
+
+        # Show the buffer text
+        if visible_text:
+            self.window.addstr(self.y + 1, self.x + 1, visible_text)
+
+        # Set cursor position
+        cursor_x = self.x + 1 + (self.cursor_pos - self.visible_start)
+        self.window.move(self.y + 1, cursor_x)
+
+
 class ClientTUI:
     """Terminal User Interface for the GPT Generals game client."""
 
-    def __init__(self, stdscr, client: GameClient):
+    def __init__(self, stdscr, client: GameClient, manual_mode: bool = False):
         """
         Initialize the TUI client.
 
         Args:
             stdscr: The curses standard screen
             client: GameClient instance already connected to the server
+            manual_mode: Whether to start in manual control mode (default False)
         """
         self.stdscr = stdscr
         self.client = client
@@ -43,11 +141,16 @@ class ClientTUI:
         self.active_unit: Optional[str] = None
         self.total_coins = 0
         self.is_game_over = False
+        self.manual_mode = manual_mode
+        self.chat_history = ChatHistory()
+        self.chat_input: Optional[ChatInput] = None
+        self.chat_mode_active = False
+        self.player_name = "Player"  # Default player name
 
         # Initialize curses
         self._setup_curses()
 
-        # Register callbacks for game state updates
+        # Register callbacks for game state updates and chat messages
         self._register_callbacks()
 
     def _setup_curses(self):
@@ -79,7 +182,7 @@ class ClientTUI:
         self.stdscr.keypad(True)
 
     def _register_callbacks(self):
-        """Register callbacks for game state updates."""
+        """Register callbacks for game state updates and chat messages."""
 
         # Callback for when game state is updated
         def on_state_update(game):
@@ -110,6 +213,25 @@ class ClientTUI:
 
             self.message_timeout = time.time() + 2  # Show for 2 seconds
 
+        # Callback for chat messages
+        def on_chat_message(data):
+            sender = data.get("sender", "Unknown")
+            content = data.get("content", "")
+            sender_type = data.get("sender_type", "player")
+
+            # Create a ChatMessage and add it to our history
+            message = ChatMessage(sender, content, sender_type)
+            self.chat_history.add_message(message)
+
+            # Set a temporary message notification
+            if sender != self.player_name:  # Don't notify about our own messages
+                self.message = (
+                    f"New message from {sender}: {content[:20]}..."
+                    if len(content) > 20
+                    else f"New message from {sender}: {content}"
+                )
+                self.message_timeout = time.time() + 2  # Show for 2 seconds
+
         # Callback for errors
         def on_error(error):
             self.message = f"Error: {error}"
@@ -118,6 +240,7 @@ class ClientTUI:
         # Register the callbacks
         self.client.register_state_update_callback(on_state_update)
         self.client.register_move_result_callback(on_move_result)
+        self.client.register_chat_message_callback(on_chat_message)
         self.client.register_error_callback(on_error)
 
     def handle_input(self) -> bool:
@@ -128,13 +251,31 @@ class ClientTUI:
             True if game should continue, False if it should exit
         """
         try:
+            # If we're in chat input mode, handle differently
+            if self.chat_mode_active and not self.manual_mode:
+                return self.handle_chat_input()
+
             key = self.stdscr.getch()
+            if key == -1:  # No input
+                return True
+
             if key == ord("q") or key == ord("Q"):
                 return False
             elif key == ord(" "):
                 self.paused = not self.paused
             elif key == ord("h") or key == ord("H"):
                 self.show_help()
+            elif key == ord("t") or key == ord("T"):
+                # Toggle between manual and chat modes
+                self.manual_mode = not self.manual_mode
+                mode_name = "manual" if self.manual_mode else "chat"
+                self.message = f"Switched to {mode_name} mode"
+                self.message_timeout = time.time() + 2
+            elif key == ord("c") or key == ord("C"):
+                # Enter chat input mode if we're in chat mode
+                if not self.manual_mode:
+                    self.start_chat_input()
+                    return True
             elif key == ord("r") or key == ord("R"):
                 # Reset the game
                 reset_game_sync(self.client)
@@ -142,7 +283,7 @@ class ClientTUI:
                 self.is_game_over = False
                 self.message = "Game reset requested"
                 self.message_timeout = time.time() + 2
-            elif self.game:  # Only process game-specific inputs if we have a game state
+            elif self.game and self.manual_mode:  # Only process game-specific inputs in manual mode
                 # Key mapping for unit selection
                 unit_keys = {}
                 for name in self.game.units.keys():
@@ -180,11 +321,69 @@ class ClientTUI:
 
         return True
 
+    def handle_chat_input(self) -> bool:
+        """
+        Handle input when in chat input mode.
+
+        Returns:
+            True if game should continue, False if it should exit
+        """
+        try:
+            key = self.stdscr.getch()
+            if key == -1:  # No input
+                return True
+
+            if key == 27:  # Escape - exit chat mode
+                self.exit_chat_input()
+                return True
+
+            # Let chat input handle the key
+            if self.chat_input:
+                message = self.chat_input.handle_key(key)
+                if message is not None and message.strip():
+                    # Send the message
+                    send_chat_message_sync(self.client, self.player_name, message, "player")
+                    self.exit_chat_input()
+
+                # Redraw input field
+                self.chat_input.draw()
+
+            # Make cursor visible in chat mode
+            curses.curs_set(1)
+
+        except Exception as e:
+            logger.error(f"Error handling chat input: {e}")
+
+        return True
+
+    def start_chat_input(self):
+        """Enter chat input mode."""
+        self.chat_mode_active = True
+        input_width = self.width - 4  # Leave some margin
+        input_y = self.height - 4
+
+        # Create chat input at the bottom of the screen
+        self.chat_input = ChatInput(self.stdscr, input_y, 2, input_width)
+        self.chat_input.draw()
+
+        # Make cursor visible
+        curses.curs_set(1)
+
+    def exit_chat_input(self):
+        """Exit chat input mode."""
+        self.chat_mode_active = False
+        curses.curs_set(0)  # Hide cursor
+
     def show_help(self):
         """Display help information."""
-        self.message = (
-            "Controls: Select unit (A-Z), then move with arrow keys or WASD. R to reset. Q to quit."
-        )
+        if self.manual_mode:
+            self.message = (
+                "Manual Mode: Select unit, use arrows/WASD. T: toggle mode. Q: quit. R: reset."
+            )
+        else:
+            self.message = (
+                "Chat Mode: Press C to enter a message. T: toggle mode. Q: quit. R: reset."
+            )
         self.message_timeout = time.time() + 5  # Show for 5 seconds
 
     def display_game(self):
@@ -203,7 +402,8 @@ class ClientTUI:
         self.stdscr.addstr(0, (self.width - len(title)) // 2, title, curses.A_BOLD)
 
         # Display controls
-        controls = "Controls: [q]uit | [space]pause/resume | [h]elp | [r]eset"
+        mode_name = "MANUAL" if self.manual_mode else "CHAT"
+        controls = f"[q]uit | [t]oggle mode ({mode_name}) | [h]elp | [r]eset"
         coins_remaining = len(self.game.coin_positions)
         status = (
             f"Status: {'PAUSED' if self.paused else 'Running'} | "
@@ -215,30 +415,41 @@ class ClientTUI:
             self.stdscr.addstr(1, 0, controls)
             self.stdscr.addstr(1, self.width - len(status) - 1, status)
 
-        # Render the map
-        map_lines = self._render_map().split("\n")
+        # Determine if we show chat pane
+        show_chat = not self.manual_mode and self.width >= 80
 
+        # Calculate map display area
+        map_width = (self.width // 2) - 2 if show_chat else self.width - 4
+
+        # Render the map with limited width
+        map_lines = self._render_map(max_width=map_width).split("\n")
+
+        # Display map
         start_y = 3
         for i, line in enumerate(map_lines):
-            if start_y + i < self.height - 2:
+            if start_y + i < self.height - 5:  # Leave room for status and input
                 self.stdscr.addstr(start_y + i, 2, line)
 
         # Display unit positions and active unit
         unit_info = []
         for name, unit in self.game.units.items():
-            if name == self.active_unit:
+            if name == self.active_unit and self.manual_mode:
                 unit_info.append(f"► Unit {name}: {unit.position} ◄")
             else:
                 unit_info.append(f"Unit {name}: {unit.position}")
 
+        unit_text = " | ".join(unit_info)
+        if len(unit_text) > map_width:
+            unit_text = unit_text[: map_width - 3] + "..."
+
         unit_y = start_y + len(map_lines) + 1
-        if unit_y < self.height - 1:
-            self.stdscr.addstr(unit_y, 2, " | ".join(unit_info))
+        if unit_y < self.height - 4:
+            self.stdscr.addstr(unit_y, 2, unit_text)
 
         # Display connection status
         conn_status = "Connected to server" if self.client.connected else "Disconnected"
         conn_y = unit_y + 1
-        if conn_y < self.height - 1:
+        if conn_y < self.height - 3:
             self.stdscr.addstr(
                 conn_y,
                 2,
@@ -246,16 +457,78 @@ class ClientTUI:
                 curses.color_pair(7) if self.client.connected else curses.color_pair(8),
             )
 
+        # Display chat history in chat mode
+        if show_chat:
+            chat_x = map_width + 4
+            chat_width = self.width - chat_x - 2
+            self.display_chat(start_y, chat_x, chat_width)
+
         # Display message if there is one
         if self.message and time.time() < self.message_timeout:
-            message_y = self.height - 1
+            message_y = self.height - 2 if not self.chat_mode_active else self.height - 6
             self.stdscr.addstr(message_y, 2, self.message)
+
+        # If in chat input mode, draw the input field
+        if self.chat_mode_active and self.chat_input:
+            self.chat_input.draw()
 
         self.stdscr.refresh()
 
-    def _render_map(self) -> str:
+    def display_chat(self, start_y: int, x: int, width: int):
+        """
+        Display the chat history in a separate pane.
+
+        Args:
+            start_y: Starting Y position for chat display
+            x: X position for chat display
+            width: Width of chat display area
+        """
+        # Draw chat panel border
+        title = " Chat History "
+        border_top = f"┌{title:─^{width - 2}}┐"
+        self.stdscr.addstr(start_y, x, border_top)
+
+        # Draw side borders
+        for i in range(1, self.height - start_y - 5):
+            self.stdscr.addstr(start_y + i, x, "│")
+            self.stdscr.addstr(start_y + i, x + width - 1, "│")
+
+        # Draw bottom border
+        self.stdscr.addstr(self.height - 5, x, f"└{'─' * (width - 2)}┘")
+
+        # Display chat messages
+        chat_history = self.chat_history.format_chat_history(max_messages=10)
+        messages = chat_history.split("\n")
+
+        # Calculate available height for messages
+        available_height = self.height - start_y - 6
+        display_messages = (
+            messages[-available_height:] if len(messages) > available_height else messages
+        )
+
+        for i, msg in enumerate(display_messages):
+            if start_y + i + 1 < self.height - 5:
+                # Truncate message if needed
+                if len(msg) > width - 4:
+                    msg = msg[: width - 7] + "..."
+
+                # Color different types of messages
+                msg_color = curses.color_pair(6)  # Default color
+                if msg.startswith("SYSTEM:"):
+                    msg_color = curses.color_pair(8)
+                elif msg.startswith(f"{self.player_name}:"):
+                    msg_color = curses.color_pair(7)
+                else:
+                    msg_color = curses.color_pair(9)
+
+                self.stdscr.addstr(start_y + i + 1, x + 1, msg, msg_color)
+
+    def _render_map(self, max_width: Optional[int] = None) -> str:
         """
         Create a string representation of the map.
+
+        Args:
+            max_width: Optional maximum width for the map
 
         Returns:
             A string representation of the map
@@ -266,17 +539,23 @@ class ClientTUI:
         height = len(self.game.map_grid)
         width = len(self.game.map_grid[0]) if height > 0 else 0
 
+        # Limit width if specified
+        if max_width is not None and max_width < width + 3:  # +3 for row numbers and spacing
+            visible_width = max_width - 3
+        else:
+            visible_width = width
+
         # Create the base map with terrain
         rows = []
 
         # Add header row with column numbers
-        header = "  " + "".join(f"{i % 10}" for i in range(width))
+        header = "  " + "".join(f"{i % 10}" for i in range(visible_width))
         rows.append(header)
 
         # Render map grid
         for y in range(height):
             row = f"{y % 10} "
-            for x in range(width):
+            for x in range(visible_width):
                 # Check for units and coins at this position
                 char = None
                 for name, unit in self.game.units.items():
@@ -351,13 +630,14 @@ class ClientTUI:
             self.client.stop()
 
 
-def run_client_tui(host: str = "localhost", port: int = 8765):
+def run_client_tui(host: str = "localhost", port: int = 8765, manual_mode: bool = False):
     """
     Run the TUI client connected to a server.
 
     Args:
         host: Server host address
         port: Server port
+        manual_mode: Whether to start in manual control mode (default False)
     """
     # Create and start the client
     client = GameClient(host=host, port=port)
@@ -368,7 +648,7 @@ def run_client_tui(host: str = "localhost", port: int = 8765):
 
     # Run the TUI with this client
     try:
-        curses.wrapper(lambda stdscr: ClientTUI(stdscr, client).run_game())
+        curses.wrapper(lambda stdscr: ClientTUI(stdscr, client, manual_mode).run_game())
     finally:
         # Make sure to stop the client
         client.stop()

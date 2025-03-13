@@ -50,10 +50,11 @@ class GameClient:
         # Initialize a local copy of the game state
         self.game = None
 
-        # Callbacks for state updates
+        # Callbacks for state updates and messages
         self.state_update_callbacks: List[Callable[[GameEngine], None]] = []
         self.move_result_callbacks: List[Callable[[Dict[str, Any]], None]] = []
         self.error_callbacks: List[Callable[[str], None]] = []
+        self.chat_message_callbacks: List[Callable[[Dict[str, Any]], None]] = []
 
     def register_state_update_callback(self, callback: Callable[[GameEngine], None]) -> None:
         """
@@ -81,6 +82,15 @@ class GameClient:
             callback: Function that will be called with the error message
         """
         self.error_callbacks.append(callback)
+
+    def register_chat_message_callback(self, callback: Callable[[Dict[str, Any]], None]) -> None:
+        """
+        Register a callback to be called when a chat message is received.
+
+        Args:
+            callback: Function that will be called with the chat message data
+        """
+        self.chat_message_callbacks.append(callback)
 
     async def connect(self) -> bool:
         """
@@ -173,6 +183,20 @@ class GameClient:
                         callback(data)
                     except Exception as e:
                         logger.error(f"Error in move result callback: {e}")
+
+            elif message_type == "chat_message":
+                # Log the chat message
+                sender = data.get("sender", "unknown")
+                content = data.get("content", "")
+                sender_type = data.get("sender_type", "player")
+                logger.info(f"Chat message from {sender} ({sender_type}): {content}")
+
+                # Call chat message callbacks
+                for callback in self.chat_message_callbacks:
+                    try:
+                        callback(data)
+                    except Exception as e:
+                        logger.error(f"Error in chat message callback: {e}")
 
             elif message_type == "error":
                 error_message = data.get("message", "Unknown error")
@@ -272,6 +296,28 @@ class GameClient:
             True if command was sent successfully, False otherwise
         """
         command = {"command": "move", "unit_name": unit_name, "direction": direction}
+        return await self.send_command(command)
+
+    async def send_chat_message(
+        self, sender: str, content: str, sender_type: str = "player"
+    ) -> bool:
+        """
+        Send a chat message to the server.
+
+        Args:
+            sender: Name of the sender (typically player name or id)
+            content: Chat message content
+            sender_type: Type of sender ("player", "unit", or "system")
+
+        Returns:
+            True if message was sent successfully, False otherwise
+        """
+        command = {
+            "command": "chat",
+            "sender": sender,
+            "content": content,
+            "sender_type": sender_type,
+        }
         return await self.send_command(command)
 
     async def get_state(self) -> bool:
@@ -387,6 +433,28 @@ def reset_game_sync(client: GameClient) -> bool:
     loop = asyncio.new_event_loop()
     try:
         return loop.run_until_complete(client.reset_game())
+    finally:
+        loop.close()
+
+
+def send_chat_message_sync(
+    client: GameClient, sender: str, content: str, sender_type: str = "player"
+) -> bool:
+    """
+    Synchronous wrapper for send_chat_message.
+
+    Args:
+        client: GameClient instance
+        sender: Name of the sender (typically player name or id)
+        content: Chat message content
+        sender_type: Type of sender ("player", "unit", or "system")
+
+    Returns:
+        True if message was sent successfully, False otherwise
+    """
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(client.send_chat_message(sender, content, sender_type))
     finally:
         loop.close()
 

@@ -32,12 +32,19 @@ def run_standalone_text_client(host, port):
     run_text_client()
 
 
-def run_standalone_tui_client(host, port):
-    """Run a TUI client in standalone mode."""
+def run_standalone_tui_client(host, port, manual_mode=False):
+    """
+    Run a TUI client in standalone mode.
+
+    Args:
+        host: Host address of the server
+        port: Port number of the server
+        manual_mode: Whether to use manual control mode (default False)
+    """
     from client_tui import run_client_tui
 
     # Run the TUI client
-    run_client_tui(host=host, port=port)
+    run_client_tui(host=host, port=port, manual_mode=manual_mode)
 
 
 def run_standalone_server(host, port, width, height, water_probability, num_coins, debug=False):
@@ -66,7 +73,15 @@ def run_standalone_server(host, port, width, height, water_probability, num_coin
 
 
 def run_integrated_mode(
-    host, port, width, height, water_probability, num_coins, client_type="tui", debug=False
+    host,
+    port,
+    width,
+    height,
+    water_probability,
+    num_coins,
+    client_type="tui",
+    manual_mode=False,
+    debug=False,
 ):
     """
     Run the server in the background and a client in the foreground.
@@ -79,6 +94,7 @@ def run_integrated_mode(
         water_probability: Probability of water tiles on the map
         num_coins: Number of coins to place on the map
         client_type: Type of client to run ("tui" or "text")
+        manual_mode: Whether to use manual control mode (default False)
         debug: Whether to enable debug logging
     """
     from game_server import GameServer
@@ -110,7 +126,7 @@ def run_integrated_mode(
             logger.info("Starting TUI client...")
             from client_tui import run_client_tui
 
-            run_client_tui(host=host, port=port)
+            run_client_tui(host=host, port=port, manual_mode=manual_mode)
         else:
             logger.info("Starting text client...")
             run_standalone_text_client(host, port)
@@ -143,6 +159,9 @@ def main():
         default="tui",
         help="Type of client interface (text or tui)",
     )
+    client_group.add_argument(
+        "--manual", action="store_true", help="Use manual control mode (unit/direction commands)"
+    )
 
     # Server options
     server_group = parser.add_argument_group("Server options")
@@ -168,7 +187,7 @@ def main():
     elif args.client:
         # Client-only mode
         if args.client_type == "tui":
-            run_standalone_tui_client(args.host, args.port)
+            run_standalone_tui_client(args.host, args.port, args.manual)
         else:
             run_standalone_text_client(args.host, args.port)
     else:
@@ -181,6 +200,7 @@ def main():
             water_probability=args.water,
             num_coins=args.coins,
             client_type=args.client_type,
+            manual_mode=args.manual,
             debug=args.debug,
         )
 

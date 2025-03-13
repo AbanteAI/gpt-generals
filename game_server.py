@@ -13,6 +13,7 @@ import json
 import logging
 import signal
 import threading
+import time
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Set
 
@@ -220,6 +221,52 @@ class GameServer:
                             }
                         )
                     )
+
+            elif command == "chat":
+                sender = message_data.get("sender")
+                content = message_data.get("content")
+                sender_type = message_data.get("sender_type", "player")
+
+                if not sender or not content:
+                    await websocket.send(
+                        json.dumps(
+                            {
+                                "type": "error",
+                                "message": "Missing sender or content for chat command",
+                            }
+                        )
+                    )
+                    return
+
+                # Create a chat message to broadcast
+                chat_message = {
+                    "type": "chat_message",
+                    "sender": sender,
+                    "content": content,
+                    "sender_type": sender_type,
+                    "timestamp": str(int(time.time())),
+                }
+
+                # Broadcast the chat message to all clients
+                chat_json = json.dumps(chat_message)
+                websockets_to_remove = set()
+                for client in self.clients:
+                    try:
+                        await client.send(chat_json)
+                    except websockets.exceptions.ConnectionClosed:
+                        # Mark client for removal
+                        websockets_to_remove.add(client)
+
+                # Remove any closed connections
+                for client in websockets_to_remove:
+                    await self.unregister(client)
+
+                # Send acknowledgment to the original sender
+                await websocket.send(
+                    json.dumps(
+                        {"type": "chat_result", "success": True, "message": "Chat message sent"}
+                    )
+                )
 
             elif command == "get_state":
                 # Send the current game state to the client

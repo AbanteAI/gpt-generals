@@ -2,20 +2,28 @@
 Player controller module for the GPT Generals game.
 """
 
+from typing import Optional
+
+from message_handler import ChatHistory
+
 
 class PlayerController:
     """
     Controller class for human player input in the GPT Generals game.
     """
 
-    def __init__(self, game_engine):
+    def __init__(self, game_engine, manual_mode=False):
         """
         Initialize the player controller.
 
         Args:
             game_engine: GameEngine instance to control
+            manual_mode: If True, use manual control mode with unit/direction commands
+                        If False, use natural language input mode (default)
         """
         self.game_engine = game_engine
+        self.manual_mode = manual_mode
+        self.chat_history = ChatHistory()
         self.direction_map = {
             "w": "up",
             "a": "left",
@@ -30,6 +38,23 @@ class PlayerController:
     def process_input(self, player_input: str) -> bool:
         """
         Process player input and apply it to the game.
+
+        Args:
+            player_input: Either a manual control command "<unit_letter><direction>"
+                          or a natural language command, depending on mode
+
+        Returns:
+            True if the input was valid and any action was successful, False otherwise
+        """
+        # Check if we're in manual mode
+        if self.manual_mode:
+            return self._process_manual_input(player_input)
+        else:
+            return self._process_natural_language(player_input)
+
+    def _process_manual_input(self, player_input: str) -> bool:
+        """
+        Process manual mode input with unit/direction format.
 
         Args:
             player_input: Input string in the format "<unit_letter><direction>"
@@ -67,3 +92,47 @@ class PlayerController:
             print(f"Move failed. Unit {unit_name} cannot move {direction}.")
 
         return success
+
+    def _process_natural_language(self, player_input: str) -> bool:
+        """
+        Process natural language input.
+
+        Args:
+            player_input: A natural language command
+
+        Returns:
+            True if the input was processed successfully, False otherwise
+        """
+        # Add the player's message to chat history
+        self.chat_history.add_player_message(player_input)
+
+        # For now, just acknowledge the input without doing anything
+        # Later this would be processed by an LLM to determine what actions to take
+        message = (
+            f"Received your message: '{player_input}'. "
+            f"Natural language processing not implemented yet."
+        )
+        self.chat_history.add_system_message(message)
+
+        # Always return True since we're just adding to chat history
+        return True
+
+    def toggle_mode(self):
+        """Toggle between manual and natural language input modes."""
+        self.manual_mode = not self.manual_mode
+        mode_name = "manual" if self.manual_mode else "natural language"
+        message = f"Switched to {mode_name} input mode."
+        self.chat_history.add_system_message(message)
+        print(message)
+
+    def get_chat_history(self, max_messages: Optional[int] = None):
+        """
+        Get formatted chat history.
+
+        Args:
+            max_messages: Maximum number of messages to include
+
+        Returns:
+            Formatted chat history as a string
+        """
+        return self.chat_history.format_chat_history(max_messages)
