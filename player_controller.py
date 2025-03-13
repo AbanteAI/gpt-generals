@@ -85,9 +85,13 @@ class PlayerController:
         # Translate wasd to game directions
         direction = self.direction_map[direction_key]
 
-        # For testing purposes, allow any unit movement
-        # In a real game, you would use the player's ID to restrict movement
-        player_id = None  # Set to None to allow any player to move any unit for testing
+        # Get the player's ID from the game engine based on the unit name
+        unit = self.game_engine.units.get(unit_name)
+        if unit:
+            # Check if the unit exists in the game
+            player_id = unit.player_id
+        else:
+            player_id = None
 
         # Try to move the unit
         success = self.game_engine.move_unit(unit_name, direction, player_id)
