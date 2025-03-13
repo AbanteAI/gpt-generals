@@ -44,6 +44,11 @@ export class GameClient {
       this.connectionListeners = this.connectionListeners.filter(cb => cb !== callback);
     };
   }
+  
+  // Public method to check if connection is active
+  public isConnectionActive(): boolean {
+    return this.isConnected;
+  }
 
   // Connect to WebSocket server
   public connect(url: string = DEFAULT_WS_URL): void {
@@ -128,8 +133,10 @@ export class GameClient {
           turn: data.current_turn
         };
         
-        // Notify all listeners
-        this.listeners.forEach(listener => listener(this.gameState));
+        // Notify all listeners with the non-null game state
+        if (this.gameState) {
+          this.listeners.forEach(listener => listener(this.gameState));
+        }
       } else if (data.type === 'error') {
         console.error('Server error:', data.message);
       }
@@ -190,7 +197,7 @@ export async function getGameState(): Promise<GameState> {
       });
       
       // Ensure we're connected and request state
-      if (!gameClient.isConnected) {
+      if (!gameClient.isConnectionActive()) {
         gameClient.connect();
       } else {
         gameClient.requestGameState();
