@@ -1,36 +1,42 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Container, Typography, Paper, Grid, TextField, Button } from '@mui/material';
-import { GameState, ChatHistory, ChatMessage } from './models';
+import { Box, Container, Typography, Paper, Grid, TextField, Button, Chip, Alert } from '@mui/material';
+import { GameState } from './models';
 import { GameBoard } from './components/GameBoard';
 import { ChatPanel } from './components/ChatPanel';
-import { getGameState, getChatHistory } from './api';
+import { gameClient } from './api';
 
 const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState<boolean>(false);
   const [playerName, setPlayerName] = useState<string>('Player');
   const [playerNameInput, setPlayerNameInput] = useState<string>('Player');
   const [showNameInput, setShowNameInput] = useState<boolean>(true);
 
   useEffect(() => {
-    const fetchGameState = async () => {
-      try {
-        const state = await getGameState();
-        setGameState(state);
-      } catch (err) {
-        setError('Failed to fetch game state');
-        console.error(err);
+    // Subscribe to game state updates
+    const unsubscribeGameState = gameClient.subscribeToGameState((state) => {
+      setGameState(state);
+      // Clear any errors when we get new state
+      setError(null);
+    });
+    
+    // Subscribe to connection state updates
+    const unsubscribeConnection = gameClient.subscribeToConnectionState((connected) => {
+      setIsConnected(connected);
+      if (!connected) {
+        setError('Connection to server lost. Attempting to reconnect...');
+      } else if (error && error.includes('Connection to server lost')) {
+        setError(null);
       }
+    });
+    
+    // Clean up subscriptions on unmount
+    return () => {
+      unsubscribeGameState();
+      unsubscribeConnection();
     };
-
-    fetchGameState();
-    
-    // Set up polling every second
-    const intervalId = setInterval(fetchGameState, 1000);
-    
-    // Clean up interval on component unmount
-    return () => clearInterval(intervalId);
-  }, []);
+  }, [error]);
 
   const handleSetPlayerName = () => {
     if (playerNameInput.trim()) {
@@ -41,9 +47,17 @@ const App: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, pb: 4 }}>
-      <Typography variant="h3" component="h1" gutterBottom>
-        GPT Generals
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h3" component="h1">
+          GPT Generals
+        </Typography>
+        <Chip 
+          label={isConnected ? "Connected" : "Disconnected"} 
+          color={isConnected ? "success" : "error"} 
+          variant="outlined" 
+        />
+      </Box>
+      
       <Typography variant="body1" paragraph>
         A game with LLM-controlled units competing to collect coins.
       </Typography>
@@ -71,9 +85,9 @@ const App: React.FC = () => {
       )}
       
       {error && (
-        <Typography color="error" sx={{ mb: 2 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
           {error}
-        </Typography>
+        </Alert>
       )}
       
       <Grid container spacing={3}>
@@ -89,7 +103,9 @@ const App: React.FC = () => {
               </>
             ) : (
               <Box sx={{ textAlign: 'center', py: 4 }}>
-                <Typography>Loading game state...</Typography>
+                <Typography>
+                  {isConnected ? "Waiting for game state..." : "Connecting to server..."}
+                </Typography>
               </Box>
             )}
           </Paper>

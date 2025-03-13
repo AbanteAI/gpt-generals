@@ -79,7 +79,7 @@ class TestGameEngine(unittest.TestCase):
         game = GameEngine(map_grid=custom_map)
 
         # Clear existing units and place unit at edge of map
-        game.units = {"A": Unit(name="A", position=(0, 0))}
+        game.units = {"A": Unit("A", (0, 0))}
 
         # Try to move left and down (out of bounds)
         self.assertFalse(game.move_unit("A", "left"))
@@ -145,7 +145,7 @@ class TestGameEngine(unittest.TestCase):
         game = GameEngine(map_grid=custom_map)
 
         # Position units and coins at known locations
-        game.units = {"A": Unit(name="A", position=(1, 1)), "B": Unit(name="B", position=(3, 3))}
+        game.units = {"A": Unit("A", (1, 1)), "B": Unit("B", (3, 3))}
         game.coin_positions = [(2, 2), (4, 4)]
 
         # Render map
