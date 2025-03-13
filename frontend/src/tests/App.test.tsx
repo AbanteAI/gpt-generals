@@ -5,7 +5,8 @@ import App from '../App';
 // Mock the API call
 const mockGameState = {
   mapGrid: [[0, 0], [0, 0]],
-  units: { 'A': { name: 'A', position: { x: 0, y: 0 } } },
+  units: { 'A': { name: 'A', position: { x: 0, y: 0 }, player_id: 'p0' } },
+  players: { 'p0': { id: 'p0', name: 'Player 1', color: '#F44336' } },
   coinPositions: [{ x: 1, y: 1 }],
   turn: 1
 };
