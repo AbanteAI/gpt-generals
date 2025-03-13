@@ -1,40 +1,59 @@
 # GPT Generals Frontend
 
-A simple frontend for the GPT Generals game that displays the game map and state.
+A React-based frontend for the GPT Generals game that displays the game map and state.
 
-## Setup
+## What's New
+- Migrated from Webpack to Vite for faster development and builds
+- Switched from vanilla TypeScript to React with TypeScript
+- Implemented Material UI (MUI) for modern UI components
+- Maintained the same grid-based map visualization with improved styling
+- Updated tests to work with React components
+- Kept API separation with improved functional exports
 
-1. Install dependencies:
-```
-npm install
-```
+## Setup and Development
 
-2. Build the project:
-```
-npm run build
-```
+1. Navigate to the frontend directory:
+   ```
+   cd frontend
+   ```
 
-For development with auto-rebuilding:
-```
-npm run watch
-```
+2. Install dependencies:
+   ```
+   npm install
+   ```
 
-3. Run the frontend:
-Open the `index.html` file in your web browser, or serve the directory with a simple HTTP server:
-```
-npx http-server .
-```
+3. Start the development server:
+   ```
+   npm run dev
+   ```
+   This will start Vite's development server with hot module replacement at http://localhost:5173
 
-## Structure
+4. Or build for production:
+   ```
+   npm run build
+   ```
+   And then preview the production build:
+   ```
+   npm run preview
+   ```
 
-- `src/models.ts` - Data models matching the game's backend
-- `src/api.ts` - API client to fetch game state (currently using mock data)
-- `src/renderer.ts` - Responsible for rendering the game map to HTML
-- `src/main.ts` - Main application logic, handles polling and updates
+5. Testing:
+   - Run tests: `npm test`
+   - Watch tests: `npm run test:watch`
+
+## Project Structure
+- `/src` - Source files
+  - `/components` - React components
+  - `/tests` - Test files
+  - `api.ts` - API functions for fetching game state (currently using mock data)
+  - `App.tsx` - Main React application component
+  - `main.tsx` - Application entry point
+  - `models.ts` - TypeScript interfaces matching the game's backend
 
 ## Features
 
 - Displays a grid-based map with land and water tiles
 - Shows units and coins on the map
 - Updates automatically every second with mock data
-- Responsive grid layout
+- Modern, responsive UI using Material UI components
+- Improved developer experience with Vite's hot module replacement
