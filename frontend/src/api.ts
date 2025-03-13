@@ -6,7 +6,12 @@ const DEFAULT_WS_URL = 'ws://localhost:8765';
 // Class to manage WebSocket connection and game state
 export class GameClient {
   private ws: WebSocket | null = null;
-  private gameState: GameState | null = null;
+  private gameState: GameState = {
+    mapGrid: [],
+    units: {},
+    coinPositions: [],
+    turn: 0
+  };
   private chatHistory: ChatHistory = { messages: [] };
   private gameStateListeners: ((gameState: GameState) => void)[] = [];
   private chatHistoryListeners: ((chatHistory: ChatHistory) => void)[] = [];

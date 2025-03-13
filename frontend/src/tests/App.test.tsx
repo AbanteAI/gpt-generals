@@ -28,15 +28,46 @@ jest.mock('../components/ChatPanel', () => ({
 }));
 
 // Mock the API functions
-jest.mock('../api', () => ({
-  getGameState: () => getGameStateMock(),
-  getChatHistory: () => getChatHistoryMock(),
-  sendChatMessage: (
-    sender: string, 
-    content: string, 
-    senderType: 'player' | 'system' | 'unit'
-  ) => sendChatMessageMock(sender, content, senderType)
-}));
+jest.mock('../api', () => {
+  // Create mock implementations
+  return {
+    getGameState: () => getGameStateMock(),
+    getChatHistory: () => getChatHistoryMock(),
+    sendChatMessage: (
+      sender: string, 
+      content: string, 
+      senderType: 'player' | 'system' | 'unit'
+    ) => sendChatMessageMock(sender, content, senderType),
+    
+    // Mock the gameClient object that App.tsx uses
+    gameClient: {
+      getCurrentGameState: jest.fn().mockReturnValue(mockGameState),
+      getCurrentChatHistory: jest.fn().mockReturnValue(mockChatHistory),
+      
+      // Subscriptions with callbacks
+      subscribeToGameState: jest.fn().mockImplementation(callback => {
+        callback(mockGameState);
+        return jest.fn(); // Return unsubscribe function
+      }),
+      
+      subscribeToChatHistory: jest.fn().mockImplementation(callback => {
+        callback(mockChatHistory);
+        return jest.fn();
+      }),
+      
+      subscribeToConnectionState: jest.fn().mockImplementation(callback => {
+        callback(true); // Simulate connected state
+        return jest.fn();
+      }),
+      
+      // Other methods
+      isConnectionActive: jest.fn().mockReturnValue(true),
+      connect: jest.fn(),
+      requestGameState: jest.fn(),
+      sendChatMessage: jest.fn().mockResolvedValue(true)
+    }
+  };
+});
 
 describe('App', () => {
   beforeEach(() => {
