@@ -99,8 +99,18 @@ class GameServer:
         Returns:
             Dictionary containing the current game state
         """
-        # Convert TerrainType enum to string
-        map_grid_serialized = [[cell.value for cell in row] for row in self.game.map_grid]
+        # Convert TerrainType enum to string - use enum name instead of value
+        # This ensures the frontend gets "WATER" or "LAND" instead of "~" or "."
+        map_grid_serialized = [[cell.name for cell in row] for row in self.game.map_grid]
+
+        # Log terrain counts for debugging
+        land_count = sum(
+            1 for row in self.game.map_grid for cell in row if cell == TerrainType.LAND
+        )
+        water_count = sum(
+            1 for row in self.game.map_grid for cell in row if cell == TerrainType.WATER
+        )
+        logger.info(f"Sending map with {land_count} land tiles and {water_count} water tiles")
 
         # Convert units dictionary to serializable format
         units_serialized = {
