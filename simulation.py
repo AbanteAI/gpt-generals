@@ -34,7 +34,7 @@ def calculate_manhattan_distance(pos1: tuple[int, int], pos2: tuple[int, int]) -
 
 
 def get_relative_direction(
-    from_pos: Tuple[int, int], to_pos: Tuple[int, int]
+    from_pos: tuple[int, int], to_pos: tuple[int, int]
 ) -> tuple[str, int, int]:
     """
     Get the relative direction from one position to another.
