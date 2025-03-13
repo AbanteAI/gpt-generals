@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { GameBoard } from '../components/GameBoard';
 import { TerrainType } from '../models';
 
@@ -19,30 +19,25 @@ describe('GameBoard', () => {
   };
 
   it('renders grid with correct number of cells', () => {
-    const { container } = render(<GameBoard gameState={mockGameState} />);
-    // Find all direct children of the grid container (the cell elements)
-    const gridContainer = container.querySelector('[style*="display: grid"]');
-    const gridCells = gridContainer ? gridContainer.children : [];
+    render(<GameBoard gameState={mockGameState} />);
+    // Find the game grid using the test ID
+    const gridCells = screen.getAllByTestId(/^grid-cell-/);
     expect(gridCells.length).toBe(4); // 2x2 grid
   });
 
   it('displays unit in correct position', () => {
-    const { container } = render(<GameBoard gameState={mockGameState} />);
-    // Get all grid cells
-    const gridContainer = container.querySelector('[style*="display: grid"]');
-    const gridCells = Array.from(gridContainer?.children || []);
-    // First cell should have unit A (position 0,0)
-    const unitCell = gridCells[0];
+    render(<GameBoard gameState={mockGameState} />);
+    // Find the cell at position 0,0 which should contain unit A
+    const unitCell = screen.getByTestId('grid-cell-0-0');
     expect(unitCell.textContent).toBe('A');
+    expect(unitCell.dataset.cellType).toBe('unit');
   });
 
   it('displays coin in correct position', () => {
-    const { container } = render(<GameBoard gameState={mockGameState} />);
-    // Get all grid cells
-    const gridContainer = container.querySelector('[style*="display: grid"]');
-    const gridCells = Array.from(gridContainer?.children || []);
-    // Last cell should have coin (position 1,1 is the 4th element in row-major order)
-    const coinCell = gridCells[3];
+    render(<GameBoard gameState={mockGameState} />);
+    // Find the cell at position 1,1 which should contain a coin
+    const coinCell = screen.getByTestId('grid-cell-1-1');
     expect(coinCell.textContent).toBe('c');
+    expect(coinCell.dataset.cellType).toBe('coin');
   });
 });

@@ -30,6 +30,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center' }}>
       <Box
+        data-testid="game-grid"
         sx={{
           display: 'grid',
           gridTemplateColumns: `repeat(${gridWidth}, 30px)`,
@@ -50,6 +51,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
               return (
                 <Box
                   key={`${x}-${y}`}
+                  data-testid={`grid-cell-${x}-${y}`}
+                  data-cell-type={unitName ? 'unit' : (hasCoin ? 'coin' : 'terrain')}
                   sx={{
                     width: '100%',
                     height: '100%',
