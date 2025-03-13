@@ -6,6 +6,8 @@ This module implements a client that connects to the game server
 and provides an interface for controlling the game.
 """
 
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
@@ -13,7 +15,6 @@ import threading
 from typing import Any, Callable, Dict, List, Optional
 
 import websockets
-from websockets import WebSocketClientProtocol
 from websockets.exceptions import ConnectionClosed
 
 from game_engine import GameEngine, Unit
@@ -41,7 +42,7 @@ class GameClient:
         """
         self.host = host
         self.port = port
-        self.websocket: Optional[WebSocketClientProtocol] = None
+        self.websocket: Optional["websockets.WebSocketClientProtocol"] = None
         self.client_thread: Optional[threading.Thread] = None
         self.running = False
         self.connected = False

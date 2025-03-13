@@ -6,6 +6,8 @@ This module implements a server that manages the game state and handles
 client connections via WebSockets.
 """
 
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
@@ -15,7 +17,6 @@ from dataclasses import dataclass
 from typing import Any, Dict, Optional, Set
 
 import websockets
-from websockets import WebSocketServerProtocol
 
 from game_engine import GameEngine
 
@@ -77,14 +78,14 @@ class GameServer:
         )
 
         # Keep track of connected clients
-        self.clients: Set[WebSocketServerProtocol] = set()
+        self.clients: Set["websockets.WebSocketServerProtocol"] = set()
 
         # Server state
         self.server_running = False
         self.server_task: Optional[asyncio.Task] = None
         self.server_thread: Optional[threading.Thread] = None
 
-    async def register(self, websocket: WebSocketServerProtocol) -> None:
+    async def register(self, websocket: "websockets.WebSocketServerProtocol") -> None:
         """Register a new client connection."""
         self.clients.add(websocket)
         client_id = id(websocket)
@@ -93,7 +94,7 @@ class GameServer:
         # Send the current game state to the new client
         await self.send_game_state(websocket)
 
-    async def unregister(self, websocket: WebSocketServerProtocol) -> None:
+    async def unregister(self, websocket: "websockets.WebSocketServerProtocol") -> None:
         """Unregister a client connection."""
         self.clients.remove(websocket)
         client_id = id(websocket)
@@ -125,7 +126,9 @@ class GameServer:
             "height": self.game.height,
         }
 
-    async def send_game_state(self, websocket: Optional[WebSocketServerProtocol] = None) -> None:
+    async def send_game_state(
+        self, websocket: Optional["websockets.WebSocketServerProtocol"] = None
+    ) -> None:
         """
         Send the current game state to clients.
 
@@ -153,7 +156,7 @@ class GameServer:
                 await self.unregister(client)
 
     async def process_command(
-        self, websocket: WebSocketServerProtocol, message_data: Dict[str, Any]
+        self, websocket: "websockets.WebSocketServerProtocol", message_data: Dict[str, Any]
     ) -> None:
         """
         Process a command from a client.
@@ -248,7 +251,7 @@ class GameServer:
                 json.dumps({"type": "error", "message": f"Server error: {str(e)}"})
             )
 
-    async def handler(self, websocket: WebSocketServerProtocol) -> None:
+    async def handler(self, websocket: "websockets.WebSocketServerProtocol") -> None:
         """
         Handle a client connection.
 
