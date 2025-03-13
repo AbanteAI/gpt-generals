@@ -5,6 +5,7 @@ from game_engine import GameEngine
 from llm_utils import ParsedResponse
 from map_generator import MapGenerator, TerrainType
 from simulation import (
+    Direction,
     MoveDecision,
     MoveDecisionResponse,
     get_game_state_description,
@@ -40,8 +41,8 @@ class TestLLMMovement(unittest.TestCase):
     def test_move_decision_model(self):
         """Test the MoveDecision Pydantic model."""
         # Create a valid move decision
-        move = MoveDecision(direction="up", reasoning="Moving up to collect a coin")
-        self.assertEqual(move.direction, "up")
+        move = MoveDecision(direction=Direction.UP, reasoning="Moving up to collect a coin")
+        self.assertEqual(move.direction, Direction.UP)
         self.assertEqual(move.reasoning, "Moving up to collect a coin")
 
         # Test invalid direction
@@ -68,7 +69,7 @@ class TestLLMMovement(unittest.TestCase):
         """Test getting a move decision from the LLM (mocked)."""
         # Create a MoveDecision instance for the mock to return
         move_decision = MoveDecision(
-            direction="right", reasoning="Moving right to collect the coin at (1,0)"
+            direction=Direction.RIGHT, reasoning="Moving right to collect the coin at (1,0)"
         )
 
         # Create a raw response string that would typically be returned

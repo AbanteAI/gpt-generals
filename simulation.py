@@ -1,5 +1,6 @@
 import argparse
 import random
+from enum import Enum
 from typing import NamedTuple, Optional
 
 from pydantic import BaseModel, Field
@@ -9,14 +10,21 @@ from llm_utils import Messages, call_openrouter_structured
 from map_generator import MapGenerator, TerrainType
 
 
+class Direction(str, Enum):
+    """Enum for the valid move directions."""
+
+    UP = "up"
+    DOWN = "down"
+    LEFT = "left"
+    RIGHT = "right"
+
+
 class MoveDecision(BaseModel):
     """Model representing a move decision for a unit."""
 
-    direction: str = Field(
+    direction: Direction = Field(
         ...,
         description="Direction to move: 'up', 'down', 'left', or 'right'",
-        # Add validation to ensure direction is one of the allowed values
-        pattern="^(up|down|left|right)$",
     )
     reasoning: str = Field(..., description="Reasoning behind this move decision")
 
