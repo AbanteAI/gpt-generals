@@ -44,7 +44,7 @@ const App: React.FC = () => {
     const unsubscribeLobbyState = gameClient.subscribeToLobbyState((lobbyState) => {
       // Check if we're already tracking a specific room
       if (currentRoomId) {
-        const currentRoom = lobbyState.rooms.find(room => room.id === currentRoomId);
+        const currentRoom = lobbyState.rooms.find((room: { id: string }) => room.id === currentRoomId);
         
         // If our current room is now in playing state, we're in a game
         if (currentRoom && currentRoom.status === 'playing') {
@@ -54,7 +54,7 @@ const App: React.FC = () => {
         // Check if we're in any room that's in playing state
         // This handles the case where the host starts a game and we need to join it
         for (const room of lobbyState.rooms) {
-          const playerInRoom = room.players.some(player => player.name === playerName);
+          const playerInRoom = room.players.some((player: { name: string }) => player.name === playerName);
           if (playerInRoom && room.status === 'playing') {
             // We found a playing room we're in - join it
             setCurrentRoomId(room.id);

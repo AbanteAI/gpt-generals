@@ -81,8 +81,8 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
       setRooms(lobbyState.rooms);
       
       // Find if player is in any room
-      const playerInRoom = lobbyState.rooms.find(room => 
-        room.players.some(player => player.name === playerName)
+      const playerInRoom = lobbyState.rooms.find((room: GameRoom) => 
+        room.players.some((player: LobbyPlayer) => player.name === playerName)
       );
       
       if (playerInRoom) {
