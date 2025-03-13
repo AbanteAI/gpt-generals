@@ -5,7 +5,7 @@ This module provides a ChatHistory class to manage chat messages
 for natural language interaction with units.
 """
 
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 
 class ChatHistory:
@@ -90,7 +90,7 @@ class ChatHistory:
         else:
             return f"UNIT {sender}: {content}"
 
-    def format_chat_history(self, max_messages: int = None) -> str:
+    def format_chat_history(self, max_messages: Optional[int] = None) -> str:
         """
         Format the chat history for display.
 
@@ -100,8 +100,11 @@ class ChatHistory:
         Returns:
             Formatted chat history as a string
         """
-        messages = self.messages
-        if max_messages is not None:
+        # Use all messages by default
+        if max_messages is None:
+            messages = self.messages
+        else:
+            # Only get the last max_messages
             messages = self.get_last_n_messages(max_messages)
 
         return "\n".join(self.format_message(msg) for msg in messages)

@@ -2,6 +2,8 @@
 Player controller module for the GPT Generals game.
 """
 
+from typing import Optional
+
 from message_handler import ChatHistory
 
 
@@ -123,7 +125,7 @@ class PlayerController:
         self.chat_history.add_system_message(message)
         print(message)
 
-    def get_chat_history(self, max_messages=None):
+    def get_chat_history(self, max_messages: Optional[int] = None):
         """
         Get formatted chat history.
 
