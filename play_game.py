@@ -97,9 +97,8 @@ def main():
         if player_input.lower() in ["h", "help"]:
             if controller.manual_mode:
                 print("\nManual Mode Controls:")
-                print(
-                    "  Unit letter + Direction: A, B, etc. + w/k (up), a/h (left), s/j (down), d/l (right)"
-                )
+                print("  Unit letter + Direction: A, B, etc. + w/k (up), a/h (left),")
+                print("                           s/j (down), d/l (right)")
                 print("  Examples: 'Aw' moves unit A up, 'Bd' moves unit B right")
             else:
                 print("\nChat Mode:")
@@ -127,7 +126,8 @@ def main():
                 if not controller.manual_mode:
                     controller.chat_history.add_system_message("A coin was collected!")
 
-            # Only advance turn if in manual mode or if we implement actual unit movement in chat mode
+            # Only advance turn in manual mode
+            # (Chat mode will advance turn when NLP is implemented)
             if controller.manual_mode:
                 game.next_turn()
 

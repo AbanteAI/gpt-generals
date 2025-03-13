@@ -300,7 +300,7 @@ class PlayerTUI:
     def show_help(self):
         """Display help information."""
         if self.controller.manual_mode:
-            self.message = "Manual Mode: Select unit (A-Z), then move with arrow keys or WASD. T to toggle mode. Q to quit."
+            self.message = "Manual Mode: Select unit (A-Z), then use arrows/WASD. T to toggle mode. Q to quit."
         else:
             self.message = "Chat Mode: Press 'c' to enter a message. T to toggle mode. Q to quit."
         self.message_timeout = time.time() + 5  # Show for 5 seconds
