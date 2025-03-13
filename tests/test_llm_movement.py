@@ -5,6 +5,7 @@ from game_engine import GameEngine
 from llm_utils import ParsedResponse
 from map_generator import MapGenerator, TerrainType
 from simulation import (
+    Direction,
     MoveDecision,
     MoveDecisionResponse,
     get_game_state_description,
@@ -40,13 +41,20 @@ class TestLLMMovement(unittest.TestCase):
     def test_move_decision_model(self):
         """Test the MoveDecision Pydantic model."""
         # Create a valid move decision
-        move = MoveDecision(direction="up", reasoning="Moving up to collect a coin")
-        self.assertEqual(move.direction, "up")
+        move = MoveDecision(direction=Direction.UP, reasoning="Moving up to collect a coin")
+        self.assertEqual(move.direction, Direction.UP)
         self.assertEqual(move.reasoning, "Moving up to collect a coin")
 
-        # Test invalid direction
-        with self.assertRaises(ValueError):
-            MoveDecision(direction="diagonal", reasoning="Invalid direction")
+        # Test invalid direction - use try/except to avoid type error while still testing validation
+        try:
+            # Cast to Direction to avoid type error during static checking
+            # This will still fail at runtime with ValueError which is what we want to test
+            invalid_direction = "diagonal"  # type: ignore
+            MoveDecision(direction=invalid_direction, reasoning="Invalid direction")  # type: ignore
+            self.fail("Should have raised ValueError for invalid direction")
+        except ValueError:
+            # Expected - validation should fail for invalid enum value
+            pass
 
     def test_game_state_description(self):
         """Test the game state description generation."""
@@ -68,7 +76,7 @@ class TestLLMMovement(unittest.TestCase):
         """Test getting a move decision from the LLM (mocked)."""
         # Create a MoveDecision instance for the mock to return
         move_decision = MoveDecision(
-            direction="right", reasoning="Moving right to collect the coin at (1,0)"
+            direction=Direction.RIGHT, reasoning="Moving right to collect the coin at (1,0)"
         )
 
         # Create a raw response string that would typically be returned
