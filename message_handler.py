@@ -20,7 +20,7 @@ class ChatMessage:
         Args:
             sender: The name of the sender
             content: The message content
-            sender_type: The type of sender ("player", "unit", "system")
+            sender_type: The type of sender ("player", "unit", "system", "move")
         """
         self.sender = sender
         self.content = content
@@ -78,6 +78,15 @@ class ChatHistory:
         """
         self.messages.append(ChatMessage("system", content, "system"))
 
+    def add_move_message(self, content: str) -> None:
+        """
+        Add a movement message to the chat history.
+
+        Args:
+            content: The message content describing the movement
+        """
+        self.messages.append(ChatMessage("move", content, "move"))
+
     def get_last_n_messages(self, n: int) -> List[Union[ChatMessage, Tuple[str, str]]]:
         """
         Get the last n messages from the chat history.
@@ -119,6 +128,8 @@ class ChatHistory:
             return f"SYSTEM: {content}"
         elif sender == "player":
             return f"YOU: {content}"
+        elif sender == "move":
+            return f"MOVE: {content}"
         else:
             return f"UNIT {sender}: {content}"
 

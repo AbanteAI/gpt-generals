@@ -232,6 +232,17 @@ class PlayerTUI:
                         dir_name = self.controller.direction_map[direction_key]
                         self.message = f"Unit {self.active_unit} moved {dir_name}"
 
+                    # Update message about coin collection or movement
+                    dir_name = self.controller.direction_map[direction_key]
+                    if coins_collected:
+                        self.controller.chat_history.add_move_message(
+                            f"{self.active_unit} collected a coin!"
+                        )
+                    else:
+                        self.controller.chat_history.add_move_message(
+                            f"{self.active_unit} moved {dir_name}"
+                        )
+
                     # Advance turn
                     self.game.next_turn()
                 else:
@@ -327,8 +338,8 @@ class PlayerTUI:
             self.stdscr.addstr(1, 0, controls)
             self.stdscr.addstr(1, self.width - len(status) - 1, status)
 
-        # Determine if we show chat pane
-        show_chat = not self.controller.manual_mode and self.width >= 80
+        # Always show chat pane if there's enough space
+        show_chat = self.width >= 80
 
         # Calculate map display area
         map_width = (self.width // 2) - 2 if show_chat else self.width - 4
@@ -358,7 +369,7 @@ class PlayerTUI:
         if unit_y < self.height - 4:
             self.stdscr.addstr(unit_y, 2, unit_text)
 
-        # Display chat history in chat mode
+        # Display chat history regardless of mode
         if show_chat:
             chat_x = map_width + 4
             chat_width = self.width - chat_x - 2
@@ -385,7 +396,7 @@ class PlayerTUI:
             width: Width of chat display area
         """
         # Draw chat panel border
-        title = " Chat History "
+        title = " Chat & Move History "
         border_top = f"┌{title:─^{width - 2}}┐"
         self.stdscr.addstr(start_y, x, border_top)
 
@@ -421,6 +432,9 @@ class PlayerTUI:
                     msg_color = curses.color_pair(7)
                 elif msg.startswith("UNIT"):
                     msg_color = curses.color_pair(9)
+                elif msg.startswith("MOVE:"):
+                    # Add color for move history
+                    msg_color = curses.color_pair(3)  # Yellow (coin color)
 
                 self.stdscr.addstr(start_y + i + 1, x + 1, msg, msg_color)
 
