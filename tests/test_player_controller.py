@@ -34,7 +34,7 @@ class TestPlayerController(unittest.TestCase):
 
         # Should return True and update unit position
         self.assertTrue(result)
-        self.assertEqual(self.game.units["A"].position, (1, 0))
+        self.assertEqual(self.game.units["A"].position, (1, 2))
 
     @patch("builtins.print")
     def test_invalid_move_water(self, mock_print):
@@ -42,8 +42,8 @@ class TestPlayerController(unittest.TestCase):
         # Position unit A adjacent to water
         self.game.units["A"].position = (2, 1)
 
-        # Try to move down into water
-        result = self.controller.process_input("As")
+        # Try to move up into water
+        result = self.controller.process_input("Aw")
 
         # Should return False and not change position
         self.assertFalse(result)
@@ -100,14 +100,14 @@ class TestPlayerController(unittest.TestCase):
         """Test collecting a coin."""
         # Position unit adjacent to a coin
         self.game.units["A"].position = (0, 1)
-        self.game.coin_positions = [(0, 0)]
+        self.game.coin_positions = [(0, 2)]
 
         # Move to collect coin
         result = self.controller.process_input("Aw")
 
         # Should return True, update position, and remove coin
         self.assertTrue(result)
-        self.assertEqual(self.game.units["A"].position, (0, 0))
+        self.assertEqual(self.game.units["A"].position, (0, 2))
         self.assertEqual(len(self.game.coin_positions), 0)
 
 
