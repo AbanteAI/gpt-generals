@@ -42,7 +42,17 @@ class AnimalInfo(BaseModel):
     )
 
 
-def get_animal_info(animal_name: str) -> Optional[AnimalInfo]:
+from typing import NamedTuple
+
+
+class AnimalInfoResponse(NamedTuple):
+    """Class to hold both structured animal info and raw response."""
+
+    info: AnimalInfo
+    raw_response: str
+
+
+def get_animal_info(animal_name: str) -> Optional[AnimalInfoResponse]:
     """
     Get structured information about an animal using an LLM.
 
@@ -50,7 +60,7 @@ def get_animal_info(animal_name: str) -> Optional[AnimalInfo]:
         animal_name: Name of the animal to get information about
 
     Returns:
-        AnimalInfo or None if there was an error
+        AnimalInfoResponse with both structured data and raw response, or None if there was an error
     """
     messages = Messages()
 
@@ -62,14 +72,26 @@ def get_animal_info(animal_name: str) -> Optional[AnimalInfo]:
 
     try:
         # Call the API with structured output using our AnimalInfo model
-        animal_info = call_openrouter(
+        response = call_openrouter(
             messages=messages,
             model="openai/gpt-4o-mini",  # You can change the model as needed
             response_model=AnimalInfo,
         )
 
-        # Since we specified the response_model, we know this is an AnimalInfo object
-        return animal_info  # type: ignore
+        # The response is a ParsedResponse when response_model is provided
+        if hasattr(response, "parsed") and hasattr(response, "raw"):
+            # Cast to ParsedResponse type to help the type checker
+            from typing import cast
+
+            from llm_utils import ParsedResponse
+
+            parsed_response = cast(ParsedResponse[AnimalInfo], response)
+
+            # response now contains both parsed model and raw string
+            return AnimalInfoResponse(info=parsed_response.parsed, raw_response=parsed_response.raw)
+        else:
+            # This should never happen, but satisfies the type checker
+            raise TypeError("Expected ParsedResponse but got string")
     except Exception as e:
         print(f"Error getting structured animal information: {e}")
         return None
@@ -85,10 +107,12 @@ def main():
     print(f"Getting information about: {animal_name}")
     print("Fetching data from LLM with structured output...")
 
-    # Get structured animal information
-    animal_info = get_animal_info(animal_name)
+    # Get structured animal information with raw response
+    response = get_animal_info(animal_name)
 
-    if animal_info is not None and isinstance(animal_info, AnimalInfo):
+    if response is not None:
+        animal_info = response.info
+
         print("\n=== Structured Animal Information ===")
         print(f"Species: {animal_info.species}")
         print(f"Scientific Name: {animal_info.scientific_name}")
@@ -112,6 +136,17 @@ def main():
         else:
             years_str = f"{animal_info.lifespan_years}"
             print(f"The {animal_info.species} has a lifespan of {years_str} years.")
+
+        # Show raw response as well
+        print("\n=== Raw LLM Response ===")
+        # Print just the first 300 characters if it's very long
+        raw_preview = (
+            (response.raw_response[:300] + "...")
+            if len(response.raw_response) > 300
+            else response.raw_response
+        )
+        print(raw_preview)
+        print(f"\nTotal raw response length: {len(response.raw_response)} characters")
     else:
         print("Failed to get structured information")
 

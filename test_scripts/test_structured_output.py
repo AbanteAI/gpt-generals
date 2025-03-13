@@ -5,7 +5,7 @@ Test script for demonstrating structured output with Pydantic models.
 
 import os
 import sys
-from typing import Dict, List, Optional, cast
+from typing import Dict, List, Optional
 
 # Third-party imports
 from pydantic import BaseModel, Field
@@ -82,7 +82,17 @@ Turn: {game.current_turn}
     return state_description, coin_distances
 
 
-def get_structured_game_analysis(game) -> Optional[GameAnalysis]:
+from typing import NamedTuple
+
+
+class GameAnalysisResponse(NamedTuple):
+    """Class to hold both structured game analysis and raw response."""
+
+    analysis: GameAnalysis
+    raw_response: str
+
+
+def get_structured_game_analysis(game) -> Optional[GameAnalysisResponse]:
     """
     Get a structured analysis of the current game state using the LLM.
 
@@ -90,7 +100,8 @@ def get_structured_game_analysis(game) -> Optional[GameAnalysis]:
         game: GameEngine instance with the current game state
 
     Returns:
-        GameAnalysis or None if there was an error
+        GameAnalysisResponse with both structured data and raw response,
+        or None if there was an error
     """
     state_description, coin_distances = get_game_state_description(game)
 
@@ -108,14 +119,28 @@ def get_structured_game_analysis(game) -> Optional[GameAnalysis]:
 
     try:
         # Call the API with structured output using our GameAnalysis model
-        analysis = call_openrouter(
+        response = call_openrouter(
             messages=messages,
             model="openai/gpt-4o-mini",  # You can change the model as needed
             response_model=GameAnalysis,
         )
 
-        # Since we specified the response_model, we know this is a GameAnalysis object
-        return cast(GameAnalysis, analysis)
+        # The response is a ParsedResponse when response_model is provided
+        if hasattr(response, "parsed") and hasattr(response, "raw"):
+            # Cast to ParsedResponse type to help the type checker
+            from typing import cast
+
+            from llm_utils import ParsedResponse
+
+            parsed_response = cast(ParsedResponse[GameAnalysis], response)
+
+            # response now contains both parsed model and raw string
+            return GameAnalysisResponse(
+                analysis=parsed_response.parsed, raw_response=parsed_response.raw
+            )
+        else:
+            # This should never happen, but satisfies the type checker
+            raise TypeError("Expected ParsedResponse but got string")
     except Exception as e:
         print(f"Error getting structured analysis: {e}")
         return None
@@ -133,10 +158,12 @@ def main():
     print(game.render_map())
     print("\nGetting structured analysis from LLM...")
 
-    # Get structured analysis
-    analysis = get_structured_game_analysis(game)
+    # Get structured analysis with raw response
+    response = get_structured_game_analysis(game)
 
-    if analysis is not None and isinstance(analysis, GameAnalysis):
+    if response is not None:
+        analysis = response.analysis
+
         print("\n=== Structured Analysis Results ===")
         print(f"Situation Assessment: {analysis.situation_assessment}")
 
@@ -156,6 +183,17 @@ def main():
         sorted_moves = sorted(analysis.recommended_moves, key=lambda m: m.unit_name)
         for move in sorted_moves:
             print(f"Unit {move.unit_name} should move {move.direction}")
+
+        # Show raw response as well
+        print("\n=== Raw LLM Response ===")
+        # Print just the first 300 characters if it's very long
+        raw_preview = (
+            (response.raw_response[:300] + "...")
+            if len(response.raw_response) > 300
+            else response.raw_response
+        )
+        print(raw_preview)
+        print(f"\nTotal raw response length: {len(response.raw_response)} characters")
     else:
         print("Failed to get structured analysis")
 

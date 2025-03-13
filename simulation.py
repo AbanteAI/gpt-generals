@@ -1,15 +1,11 @@
 import argparse
-import json
-import os
 import random
-from typing import Optional, Tuple
+from typing import NamedTuple, Optional, Tuple
 
-from dotenv import load_dotenv
-from openai import OpenAI
 from pydantic import BaseModel, Field
 
 from game_engine import GameEngine
-from llm_utils import Messages
+from llm_utils import Messages, call_openrouter
 from map_generator import MapGenerator, TerrainType
 
 
@@ -23,6 +19,13 @@ class MoveDecision(BaseModel):
         pattern="^(up|down|left|right)$",
     )
     reasoning: str = Field(..., description="Reasoning behind this move decision")
+
+
+class MoveDecisionResponse(NamedTuple):
+    """Class to hold both structured move decision and raw response."""
+
+    decision: MoveDecision
+    raw_response: str
 
 
 def calculate_manhattan_distance(pos1: Tuple[int, int], pos2: Tuple[int, int]) -> int:
@@ -217,7 +220,7 @@ Turn: {game.current_turn}
     return state_description
 
 
-def get_unit_move_decision(game: GameEngine, unit_name: str) -> Optional[MoveDecision]:
+def get_unit_move_decision(game: GameEngine, unit_name: str) -> Optional[MoveDecisionResponse]:
     """
     Get a structured move decision from the LLM for a specific unit.
 
@@ -226,7 +229,8 @@ def get_unit_move_decision(game: GameEngine, unit_name: str) -> Optional[MoveDec
         unit_name: Name of the unit to get a move decision for
 
     Returns:
-        MoveDecision or None if there was an error
+        MoveDecisionResponse with both structured decision and raw response,
+        or None if there was an error
     """
     state_description = get_game_state_description(game)
     unit_position = game.units[unit_name].position
@@ -256,42 +260,29 @@ def get_unit_move_decision(game: GameEngine, unit_name: str) -> Optional[MoveDec
     )
 
     try:
-        # Load environment variables (in case not loaded yet)
-        load_dotenv()
-
-        # Get API key
-        api_key = os.getenv("OPEN_ROUTER_KEY")
-        if not api_key:
-            raise ValueError("OPEN_ROUTER_KEY environment variable must be set")
-
-        # Initialize client
-        client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key=api_key,
-        )
-
-        # Convert messages to the format expected by the API
-        openai_messages = messages.to_openai_messages()
-
-        # Request JSON response
-        completion = client.chat.completions.create(
+        # Call the API with structured output using our MoveDecision model
+        response = call_openrouter(
+            messages=messages,
             model="openai/gpt-4o-mini",
-            messages=openai_messages,
-            response_format={"type": "json_object"},
+            response_model=MoveDecision,
         )
 
-        # Extract content
-        content = completion.choices[0].message.content
-        if content is None:
-            raise ValueError("No content in response")
+        # The response is a ParsedResponse when response_model is provided
+        if hasattr(response, "parsed") and hasattr(response, "raw"):
+            # Cast to ParsedResponse type to help the type checker
+            from typing import cast
 
-        # Parse JSON content
-        response_data = json.loads(content)
+            from llm_utils import ParsedResponse
 
-        # Create MoveDecision from parsed data
-        return MoveDecision(
-            direction=response_data["direction"], reasoning=response_data["reasoning"]
-        )
+            parsed_response = cast(ParsedResponse[MoveDecision], response)
+
+            # Return both the parsed model and raw response
+            return MoveDecisionResponse(
+                decision=parsed_response.parsed, raw_response=parsed_response.raw
+            )
+        else:
+            # This should never happen, but satisfies the type checker
+            raise TypeError("Expected ParsedResponse but got string")
     except Exception as e:
         print(f"Error getting move decision from LLM: {e}")
         return None
@@ -333,11 +324,18 @@ def run_simulation(num_turns: int = 10, use_custom_map: bool = False, use_llm: b
             if use_llm:
                 # Get move decision from LLM
                 print(f"Consulting LLM for unit {unit_name}...")
-                decision = get_unit_move_decision(game, unit_name)
+                response = get_unit_move_decision(game, unit_name)
 
-                if decision:
-                    direction = decision.direction
-                    print(f"Unit {unit_name} reasoning: {decision.reasoning}")
+                if response:
+                    direction = response.decision.direction
+                    print(f"Unit {unit_name} reasoning: {response.decision.reasoning}")
+
+                    # Debug information about raw response (can be commented out in production)
+                    if len(response.raw_response) > 200:
+                        raw_preview = response.raw_response[:200] + "..."
+                    else:
+                        raw_preview = response.raw_response
+                    print(f"Raw response preview: {raw_preview}")
                 else:
                     # Fall back to random if LLM fails
                     direction = random.choice(directions)

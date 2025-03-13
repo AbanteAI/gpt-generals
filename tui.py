@@ -205,8 +205,10 @@ class SimulationTUI:
                         decision = get_unit_move_decision(self.game, unit_name)
 
                         if decision:
-                            direction = decision.direction
-                            messages.append(f"Unit {unit_name} reasoning: {decision.reasoning}")
+                            direction = decision.decision.direction
+                            messages.append(
+                                f"Unit {unit_name} reasoning: {decision.decision.reasoning}"
+                            )
                         else:
                             direction = random.choice(self.directions)
                             messages.append(
