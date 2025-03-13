@@ -90,15 +90,17 @@ class SimulationTUI:
 
         # Display title and controls
         title = f"GPT Generals - Turn {turn_number}"
-        self.stdscr.addstr(0, (self.width - len(title)) // 2, title, curses.A_BOLD)
+        self.stdscr.addstr(
+            0, (self.width - len(title)) // 2, title, curses.A_BOLD | curses.color_pair(6)
+        )
 
         controls = "Controls: [q]uit | [space]pause/resume | [+/-]speed"
         status = f"Status: {'PAUSED' if self.paused else 'Running'} | Delay: {self.delay:.1f}s"
 
         # Only show if screen is wide enough
         if len(controls) < self.width:
-            self.stdscr.addstr(1, 0, controls)
-            self.stdscr.addstr(1, self.width - len(status) - 1, status)
+            self.stdscr.addstr(1, 0, controls, curses.color_pair(6))
+            self.stdscr.addstr(1, self.width - len(status) - 1, status, curses.color_pair(6))
 
         # Render the map
         map_lines = self.render_colored_map().split("\n")
@@ -110,20 +112,61 @@ class SimulationTUI:
 
         # Show coin count and unit positions
         coin_count = f"Coins remaining: {len(self.game.coin_positions)}"
-        self.stdscr.addstr(start_y + len(map_lines) + 1, 2, coin_count, curses.A_BOLD)
+        self.stdscr.addstr(
+            start_y + len(map_lines) + 1, 2, coin_count, curses.A_BOLD | curses.color_pair(6)
+        )
 
         # Display unit positions
         unit_positions = []
         for name, unit in self.game.units.items():
             unit_positions.append(f"Unit {name} at {unit.position}")
 
-        self.stdscr.addstr(start_y + len(map_lines) + 2, 2, " | ".join(unit_positions))
+        # Handle unit positions display - wrap to multiple lines if needed
+        unit_positions_text = " | ".join(unit_positions)
+        available_width = self.width - 4  # Allow some margin
+
+        if len(unit_positions_text) > available_width:
+            # Split to multiple lines if too wide
+            current_line = ""
+            line_num = 0
+            for pos in unit_positions:
+                if len(current_line) + len(pos) + 3 > available_width:  # +3 for " | "
+                    self.stdscr.addstr(
+                        start_y + len(map_lines) + 2 + line_num,
+                        2,
+                        current_line,
+                        curses.color_pair(6),
+                    )
+                    current_line = pos
+                    line_num += 1
+                else:
+                    if current_line:
+                        current_line += " | " + pos
+                    else:
+                        current_line = pos
+
+            if current_line:
+                self.stdscr.addstr(
+                    start_y + len(map_lines) + 2 + line_num, 2, current_line, curses.color_pair(6)
+                )
+        else:
+            self.stdscr.addstr(
+                start_y + len(map_lines) + 2, 2, unit_positions_text, curses.color_pair(6)
+            )
 
         # Display messages
         message_y = self.height - len(messages) - 1
         for i, msg in enumerate(messages):
             if message_y + i < self.height:
-                self.stdscr.addstr(message_y + i, 2, msg)
+                # Truncate message if needed to fit available width
+                available_width = self.width - 4  # Allow some margin
+                if len(msg) > available_width:
+                    display_msg = msg[: available_width - 3] + "..."
+                else:
+                    display_msg = msg
+                self.stdscr.addstr(
+                    message_y + i, 2, display_msg, curses.color_pair(6)
+                )  # Use text color pair
 
         self.stdscr.refresh()
 
