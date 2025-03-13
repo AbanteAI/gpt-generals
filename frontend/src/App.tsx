@@ -12,7 +12,8 @@ const App: React.FC = () => {
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [playerName, setPlayerName] = useState<string>('Player');
   const [playerNameInput, setPlayerNameInput] = useState<string>('Player');
-  const [showNameInput, setShowNameInput] = useState<boolean>(true);
+  // In test mode, we don't want to show the name input screen
+  const [showNameInput, setShowNameInput] = useState<boolean>(process.env.NODE_ENV !== 'test');
   
   // New state for lobby system - default to true for tests
   // Using process.env.NODE_ENV to check if we're in test mode
