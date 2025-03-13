@@ -19,3 +19,14 @@ export interface GameState {
   coinPositions: Position[];
   turn: number;
 }
+
+export interface ChatMessage {
+  sender: string;
+  content: string;
+  timestamp: number;
+  senderType: 'player' | 'system' | 'unit';
+}
+
+export interface ChatHistory {
+  messages: ChatMessage[];
+}
