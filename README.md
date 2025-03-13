@@ -52,6 +52,26 @@ Optional server configuration:
 python play_game.py --server --host 0.0.0.0 --port 8765 --width 15 --height 10 --water 0.15 --coins 8
 ```
 
+### Development Server Mode
+
+For development, you can use the auto-restarting server that monitors file changes:
+
+```bash
+python dev_server.py
+```
+
+This server automatically restarts whenever Python files are modified, making development much faster.
+
+Optional configuration (same as regular server):
+```bash
+python dev_server.py --host 0.0.0.0 --port 8765 --width 15 --height 10 --water 0.15 --coins 8
+```
+
+First, install the development requirements:
+```bash
+pip install -r dev-requirements.txt
+```
+
 ### Client-Only Mode
 
 To run just a client connecting to an existing server:
