@@ -1,11 +1,30 @@
 """
 Message handler module for the GPT Generals game.
 
-This module provides a ChatHistory class to manage chat messages
+This module provides a ChatMessage class and ChatHistory class to manage chat messages
 for natural language interaction with units.
 """
 
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
+
+
+class ChatMessage:
+    """
+    Class representing a chat message in the GPT Generals game.
+    """
+
+    def __init__(self, sender: str, content: str, sender_type: str = "player"):
+        """
+        Initialize a new chat message.
+
+        Args:
+            sender: The name of the sender
+            content: The message content
+            sender_type: The type of sender ("player", "unit", "system", "move")
+        """
+        self.sender = sender
+        self.content = content
+        self.sender_type = sender_type
 
 
 class ChatHistory:
@@ -15,12 +34,21 @@ class ChatHistory:
 
     def __init__(self):
         """Initialize an empty chat history."""
-        # Store messages as tuples of (sender, content)
-        # sender can be a unit name, "player", "system", or "move"
-        self.messages: List[Tuple[str, str]] = []
+        # Store messages as ChatMessage objects or (sender, content) tuples
+        # for backward compatibility
+        self.messages: List[Union[ChatMessage, Tuple[str, str]]] = []
 
         # Add a welcome message
         self.add_system_message("Welcome to GPT Generals! Type your commands to control units.")
+
+    def add_message(self, message: ChatMessage) -> None:
+        """
+        Add a ChatMessage object to the chat history.
+
+        Args:
+            message: The ChatMessage object to add
+        """
+        self.messages.append(message)
 
     def add_player_message(self, content: str) -> None:
         """
@@ -29,7 +57,7 @@ class ChatHistory:
         Args:
             content: The message content
         """
-        self.messages.append(("player", content))
+        self.messages.append(ChatMessage("player", content, "player"))
 
     def add_unit_message(self, unit_name: str, content: str) -> None:
         """
@@ -39,7 +67,7 @@ class ChatHistory:
             unit_name: The name of the unit sending the message
             content: The message content
         """
-        self.messages.append((unit_name, content))
+        self.messages.append(ChatMessage(unit_name, content, "unit"))
 
     def add_system_message(self, content: str) -> None:
         """
@@ -48,8 +76,8 @@ class ChatHistory:
         Args:
             content: The message content
         """
-        self.messages.append(("system", content))
-
+        self.messages.append(ChatMessage("system", content, "system"))
+        
     def add_move_message(self, content: str) -> None:
         """
         Add a movement message to the chat history.
@@ -57,9 +85,9 @@ class ChatHistory:
         Args:
             content: The message content describing the movement
         """
-        self.messages.append(("move", content))
+        self.messages.append(ChatMessage("move", content, "move"))
 
-    def get_last_n_messages(self, n: int) -> List[Tuple[str, str]]:
+    def get_last_n_messages(self, n: int) -> List[Union[ChatMessage, Tuple[str, str]]]:
         """
         Get the last n messages from the chat history.
 
@@ -67,30 +95,34 @@ class ChatHistory:
             n: Number of messages to retrieve
 
         Returns:
-            List of (sender, content) tuples
+            List of ChatMessage objects or (sender, content) tuples
         """
         return self.messages[-n:] if n < len(self.messages) else self.messages[:]
 
-    def get_all_messages(self) -> List[Tuple[str, str]]:
+    def get_all_messages(self) -> List[Union[ChatMessage, Tuple[str, str]]]:
         """
         Get all messages from the chat history.
 
         Returns:
-            List of (sender, content) tuples
+            List of ChatMessage objects or (sender, content) tuples
         """
         return self.messages[:]
 
-    def format_message(self, message: Tuple[str, str]) -> str:
+    def format_message(self, message: Union[ChatMessage, Tuple[str, str]]) -> str:
         """
         Format a message for display.
 
         Args:
-            message: A (sender, content) tuple
+            message: A ChatMessage object or (sender, content) tuple
 
         Returns:
             Formatted message string
         """
-        sender, content = message
+        if isinstance(message, ChatMessage):
+            sender = message.sender
+            content = message.content
+        else:
+            sender, content = message
 
         if sender == "system":
             return f"SYSTEM: {content}"
