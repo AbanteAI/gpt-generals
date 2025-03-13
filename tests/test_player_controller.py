@@ -23,8 +23,8 @@ class TestPlayerController(unittest.TestCase):
         # Place coins at specific positions
         self.game.coin_positions = [(0, 0), (4, 4)]
 
-        # Create the controller
-        self.controller = PlayerController(self.game)
+        # Create the controller with manual mode enabled for testing
+        self.controller = PlayerController(self.game, manual_mode=True)
 
     @patch("builtins.print")
     def test_valid_move(self, mock_print):
