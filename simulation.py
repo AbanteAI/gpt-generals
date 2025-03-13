@@ -281,7 +281,8 @@ def get_unit_move_decision(game: GameEngine, unit_name: str) -> Optional[MoveDec
                 print(f"Model refused to respond: {parsed_response.refusal}")
                 return None
 
-            # Return both the parsed model and raw response (parsed is non-None here)
+            # Return both the parsed model and raw response
+            assert parsed_response.parsed is not None  # Help type checker
             return MoveDecisionResponse(
                 decision=parsed_response.parsed, raw_response=parsed_response.raw
             )

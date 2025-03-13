@@ -139,7 +139,8 @@ def get_structured_game_analysis(game) -> Optional[GameAnalysisResponse]:
                 print(f"Model refused to respond: {parsed_response.refusal}")
                 return None
 
-            # Response contains both parsed model and raw string (parsed is non-None here)
+            # Response contains both parsed model and raw string
+            assert parsed_response.parsed is not None  # Help type checker
             return GameAnalysisResponse(
                 analysis=parsed_response.parsed, raw_response=parsed_response.raw
             )
