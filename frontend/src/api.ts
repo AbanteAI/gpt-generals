@@ -15,7 +15,16 @@ export class GameClient {
   private reconnectTimer: number | null = null;
 
   // Get the current game state
-  public getCurrentGameState(): GameState | null {
+  public getCurrentGameState(): GameState {
+    // Return a default empty state if no state is available
+    if (!this.gameState) {
+      return {
+        mapGrid: [],
+        units: {},
+        coinPositions: [],
+        turn: 0
+      };
+    }
     return this.gameState;
   }
 
@@ -312,25 +321,24 @@ gameClient.connect();
 
 // Helper function for components that just want the current game state
 export async function getGameState(): Promise<GameState> {
-  // Create a default empty game state to use as fallback
-  const emptyState: GameState = {
-    mapGrid: [],
-    units: {},
-    coinPositions: [],
-    turn: 0
-  };
-  
   return new Promise<GameState>((resolve) => {
+    // Get current state - this will never be null thanks to our default state implementation
     const currentState = gameClient.getCurrentGameState();
-    if (currentState) {
-      // If we already have state, resolve immediately
+    
+    // Check if it's a non-empty state (has at least some content)
+    const hasRealContent = currentState.mapGrid.length > 0 || Object.keys(currentState.units).length > 0;
+    
+    if (hasRealContent) {
+      // If we have a meaningful state, resolve immediately
       resolve(currentState);
     } else {
-      // Otherwise subscribe and wait for the first update
+      // Otherwise subscribe and wait for a meaningful update
       const unsubscribe = gameClient.subscribeToGameState((state: GameState) => {
-        unsubscribe();
-        // Since we're explicitly typing the param as GameState, TypeScript knows it's not null
-        resolve(state);
+        // Only resolve when we get a non-empty update
+        if (state.mapGrid.length > 0) {
+          unsubscribe();
+          resolve(state);
+        }
       });
       
       // Ensure we're connected and request state
@@ -340,11 +348,10 @@ export async function getGameState(): Promise<GameState> {
         gameClient.requestGameState();
       }
       
-      // If we're having trouble getting a state, provide a fallback empty state after 5 seconds
+      // If we're having trouble getting a real state, provide the default state after 5 seconds
       setTimeout(() => {
-        if (!gameClient.getCurrentGameState()) {
-          resolve(emptyState);
-        }
+        unsubscribe();
+        resolve(currentState);
       }, 5000);
     }
   });
