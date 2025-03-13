@@ -247,9 +247,11 @@ export class GameClient {
       turn: data.current_turn
     };
     
-    // Notify all listeners with the non-null game state
-    if (this.gameState) {
-      this.gameStateListeners.forEach(listener => listener(this.gameState));
+    // Notify all listeners with the game state
+    // Store it in a local variable to avoid null checks in the callback
+    const gameState = this.gameState;
+    if (gameState) {
+      this.gameStateListeners.forEach(listener => listener(gameState));
     }
   }
 
