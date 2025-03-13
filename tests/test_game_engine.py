@@ -154,16 +154,17 @@ class TestGameEngine(unittest.TestCase):
         # Check header row
         self.assertTrue(rendered_map[0].startswith("  01234"))
 
-        # Check water tile at (0,0)
-        self.assertEqual(rendered_map[1][2], "~")
+        # With reversed row ordering:
+        # Water tile at (0,0) is in the last row now
+        self.assertEqual(rendered_map[5][2], "~")
 
-        # Check units
-        self.assertEqual(rendered_map[2][3], "A")  # Unit A at (1,1)
-        self.assertEqual(rendered_map[4][5], "B")  # Unit B at (3,3)
+        # Check units - positions are reversed in the rendered map
+        self.assertEqual(rendered_map[4][3], "A")  # Unit A at (1,1)
+        self.assertEqual(rendered_map[2][5], "B")  # Unit B at (3,3)
 
-        # Check coins
+        # Check coins - positions are reversed in the rendered map
         self.assertEqual(rendered_map[3][4], "c")  # Coin at (2,2)
-        self.assertEqual(rendered_map[5][6], "c")  # Coin at (4,4)
+        self.assertEqual(rendered_map[1][6], "c")  # Coin at (4,4)
 
 
 if __name__ == "__main__":
