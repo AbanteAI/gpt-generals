@@ -934,7 +934,8 @@ def main():
                             for i, room in enumerate(rooms):
                                 if room.get("status") == "waiting":
                                     print(
-                                        f"{i + 1}. {room.get('name')} - Host: {room.get('hostName')}"
+                                        f"{i + 1}. {room.get('name')} - "
+                                        f"Host: {room.get('hostName')}"
                                     )
 
                             try:
