@@ -20,7 +20,6 @@ from typing import Any, Dict, Optional, Set
 import websockets
 
 from game_engine import GameEngine
-from map_generator import TerrainType
 
 # Configure logging
 logging.basicConfig(
@@ -104,14 +103,7 @@ class GameServer:
         # This ensures the frontend gets "WATER" or "LAND" instead of "~" or "."
         map_grid_serialized = [[cell.name for cell in row] for row in self.game.map_grid]
 
-        # Log terrain counts for debugging
-        land_count = sum(
-            1 for row in self.game.map_grid for cell in row if cell == TerrainType.LAND
-        )
-        water_count = sum(
-            1 for row in self.game.map_grid for cell in row if cell == TerrainType.WATER
-        )
-        logger.info(f"Sending map with {land_count} land tiles and {water_count} water tiles")
+        # Remove debug logging
 
         # Convert units dictionary to serializable format
         units_serialized = {

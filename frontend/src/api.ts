@@ -233,20 +233,7 @@ export class GameClient {
       })
     );
     
-    // Log map grid for debugging
-    console.log('Received map grid:', data.map_grid);
-    console.log('Processed map grid:', mapGrid);
-    
-    // Count terrain types
-    let landCount = 0;
-    let waterCount = 0;
-    mapGrid.forEach(row => {
-      row.forEach(cell => {
-        if (cell === TerrainType.LAND) landCount++;
-        else if (cell === TerrainType.WATER) waterCount++;
-      });
-    });
-    console.log(`Map contains: ${landCount} land, ${waterCount} water tiles`);
+    // No debug logging needed
     
     // Convert unit positions to the expected format
     const units: Record<string, Unit> = {};

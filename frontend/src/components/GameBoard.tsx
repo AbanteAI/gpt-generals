@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Box, IconButton, Paper, Grid, Typography } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, IconButton, Paper, Grid } from '@mui/material';
 import { GameState, TerrainType } from '../models';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
@@ -14,29 +14,10 @@ interface GameBoardProps {
 export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
   const { mapGrid, units, coinPositions } = gameState;
   const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
-  const [terrainCounts, setTerrainCounts] = useState({ land: 0, water: 0 });
   
   // Calculate grid dimensions
   const gridHeight = mapGrid.length;
   const gridWidth = gridHeight > 0 ? mapGrid[0].length : 0;
-  
-  // Count terrain types for debugging
-  useEffect(() => {
-    if (mapGrid.length > 0) {
-      let land = 0;
-      let water = 0;
-      mapGrid.forEach(row => {
-        row.forEach(cell => {
-          if (cell === TerrainType.LAND) {
-            land++;
-          } else if (cell === TerrainType.WATER) {
-            water++;
-          }
-        });
-      });
-      setTerrainCounts({ land, water });
-    }
-  }, [mapGrid]);
   
   const isUnitAtPosition = (x: number, y: number): string | null => {
     for (const unitKey in units) {
@@ -75,11 +56,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
   
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-      {/* Debug info */}
-      <Typography variant="caption" color="text.secondary">
-        Map contains: {terrainCounts.land} land, {terrainCounts.water} water tiles
-      </Typography>
-      
       <Box
         data-testid="game-grid"
         sx={{
@@ -142,7 +118,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                       })
                     }}
                   >
-                    {unitName || (hasCoin ? 'c' : (isWater ? '~' : ''))}
+                    {unitName || (hasCoin ? 'c' : '')}
                   </Box>
                 );
               })}
