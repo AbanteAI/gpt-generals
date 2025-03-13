@@ -198,13 +198,17 @@ def call_openrouter_structured(
 
             except (json.JSONDecodeError, ValidationError) as json_err:
                 # If manual parsing fails, raise a detailed error
-                raise ValueError(
-                    f"Failed to parse response as {response_model.__name__}: {json_err}. Response: {raw_content}"
+                error_msg = (
+                    f"Failed to parse response as {response_model.__name__}: {json_err}. "
+                    f"Response: {raw_content}"
                 )
+                raise ValueError(error_msg) from json_err
 
         except Exception as fallback_err:
             # If both methods fail, raise with details
-            raise Exception(f"Both structured and fallback parsing failed: {fallback_err}")
+            raise Exception(
+                f"Both structured and fallback parsing failed: {fallback_err}"
+            ) from fallback_err
 
 
 if __name__ == "__main__":
