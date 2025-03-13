@@ -301,7 +301,7 @@ gameClient.connect();
 
 // Helper function for components that just want the current game state
 export async function getGameState(): Promise<GameState> {
-  return new Promise((resolve) => {
+  return new Promise<GameState>((resolve) => {
     const currentState = gameClient.getCurrentGameState();
     if (currentState) {
       // If we already have state, resolve immediately
