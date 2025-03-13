@@ -45,13 +45,16 @@ class TestLLMMovement(unittest.TestCase):
         self.assertEqual(move.direction, Direction.UP)
         self.assertEqual(move.reasoning, "Moving up to collect a coin")
 
-        # Test invalid direction with string
-        with self.assertRaises(ValueError):
-            MoveDecision(direction="diagonal", reasoning="Invalid direction")
-
-        # Alternative test with invalid enum type (if needed)
-        # with self.assertRaises(TypeError):
-        #     MoveDecision(direction=5, reasoning="Invalid direction type")
+        # Test invalid direction - use try/except to avoid type error while still testing validation
+        try:
+            # Cast to Direction to avoid type error during static checking
+            # This will still fail at runtime with ValueError which is what we want to test
+            invalid_direction = "diagonal"  # type: ignore
+            MoveDecision(direction=invalid_direction, reasoning="Invalid direction")  # type: ignore
+            self.fail("Should have raised ValueError for invalid direction")
+        except ValueError:
+            # Expected - validation should fail for invalid enum value
+            pass
 
     def test_game_state_description(self):
         """Test the game state description generation."""
