@@ -11,19 +11,28 @@ interface GameBoardProps {
   gameState: GameState;
 }
 
+interface UnitAtPosition {
+  name: string;
+  color: string;
+}
+
 export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
-  const { mapGrid, units, coinPositions } = gameState;
+  const { mapGrid, units, players, coinPositions } = gameState;
   const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
   
   // Calculate grid dimensions
   const gridHeight = mapGrid.length;
   const gridWidth = gridHeight > 0 ? mapGrid[0].length : 0;
   
-  const isUnitAtPosition = (x: number, y: number): string | null => {
+  const isUnitAtPosition = (x: number, y: number): UnitAtPosition | null => {
     for (const unitKey in units) {
       const unit = units[unitKey];
       if (unit.position.x === x && unit.position.y === y) {
-        return unit.name;
+        const playerColor = players?.[unit.player_id]?.color || '#F44336'; // Default to red
+        return {
+          name: unit.name,
+          color: playerColor
+        };
       }
     }
     return null;
@@ -36,7 +45,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
   const handleCellClick = (x: number, y: number) => {
     const clickedUnit = isUnitAtPosition(x, y);
     if (clickedUnit) {
-      setSelectedUnit(clickedUnit);
+      setSelectedUnit(clickedUnit.name);
     }
   };
 
@@ -76,15 +85,15 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
             // Use React Fragment as a container for each row to maintain grid structure
             <React.Fragment key={`row-${y}`}>
               {row.map((cell, x) => {
-                const unitName = isUnitAtPosition(x, y);
+                const unitAtPos = isUnitAtPosition(x, y);
                 const hasCoin = isCoinAtPosition(x, y);
-                const isSelected = unitName && unitName === selectedUnit;
+                const isSelected = unitAtPos && unitAtPos.name === selectedUnit;
                 const isWater = cell === TerrainType.WATER;
                 
                 // Determine the background color with priority: unit > coin > terrain
                 let backgroundColor;
-                if (unitName) {
-                  backgroundColor = '#F44336'; // Red for units
+                if (unitAtPos) {
+                  backgroundColor = unitAtPos.color; // Use player's color for unit
                 } else if (hasCoin) {
                   backgroundColor = '#FFC107'; // Yellow for coins
                 } else {
@@ -95,7 +104,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                   <Box
                     key={`${x}-${y}`}
                     data-testid={`grid-cell-${x}-${y}`}
-                    data-cell-type={unitName ? 'unit' : (hasCoin ? 'coin' : (isWater ? 'water' : 'land'))}
+                    data-cell-type={unitAtPos ? 'unit' : (hasCoin ? 'coin' : (isWater ? 'water' : 'land'))}
                     onClick={() => handleCellClick(x, y)}
                     sx={{
                       width: '100%',
@@ -109,16 +118,16 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                         boxSizing: 'border-box'
                       }),
                       fontWeight: 'bold',
-                      color: unitName ? '#fff' : (hasCoin ? '#000' : undefined),
-                      cursor: unitName ? 'pointer' : 'default',
+                      color: unitAtPos ? '#fff' : (hasCoin ? '#000' : undefined),
+                      cursor: unitAtPos ? 'pointer' : 'default',
                       // For water, add wave pattern
-                      ...(isWater && !unitName && !hasCoin && {
+                      ...(isWater && !unitAtPos && !hasCoin && {
                         backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.2) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.2) 75%, transparent 75%, transparent)',
                         backgroundSize: '10px 10px'
                       })
                     }}
                   >
-                    {unitName || (hasCoin ? 'c' : '')}
+                    {unitAtPos ? unitAtPos.name : (hasCoin ? 'c' : '')}
                   </Box>
                 );
               })}

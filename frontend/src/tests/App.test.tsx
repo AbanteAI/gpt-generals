@@ -1,38 +1,32 @@
 import React from 'react';
 import { render, screen, act, waitFor } from '@testing-library/react';
 
+// Define mock game state with player data
+const mockGameState = {
+  mapGrid: [[0, 0], [0, 0]],
+  units: { 'A': { name: 'A', position: { x: 0, y: 0 }, player_id: 'p0' } },
+  players: { 'p0': { id: 'p0', name: 'Player 1', color: '#F44336' } },
+  coinPositions: [{ x: 1, y: 1 }],
+  turn: 1
+};
+
 // Set up Jest mocks before imports
 // Mock the API module
 jest.mock('../api', () => ({
-  getGameState: jest.fn().mockResolvedValue({
-    mapGrid: [[0, 0], [0, 0]],
-    units: { 'A': { name: 'A', position: { x: 0, y: 0 } } },
-    coinPositions: [{ x: 1, y: 1 }],
-    turn: 1
-  }),
+  getGameState: jest.fn().mockResolvedValue(mockGameState),
   getChatHistory: jest.fn().mockResolvedValue({ messages: [] }),
   sendChatMessage: jest.fn().mockResolvedValue(true),
   
   // Mock the gameClient object that App.tsx uses
   gameClient: {
-    getCurrentGameState: jest.fn().mockReturnValue({
-      mapGrid: [[0, 0], [0, 0]],
-      units: { 'A': { name: 'A', position: { x: 0, y: 0 } } },
-      coinPositions: [{ x: 1, y: 1 }],
-      turn: 1
-    }),
+    getCurrentGameState: jest.fn().mockReturnValue(mockGameState),
     getCurrentChatHistory: jest.fn().mockReturnValue({
       messages: []
     }),
     
     // Subscriptions with callbacks
     subscribeToGameState: jest.fn().mockImplementation(callback => {
-      callback({
-        mapGrid: [[0, 0], [0, 0]],
-        units: { 'A': { name: 'A', position: { x: 0, y: 0 } } },
-        coinPositions: [{ x: 1, y: 1 }],
-        turn: 1
-      });
+      callback(mockGameState);
       return jest.fn(); // Return unsubscribe function
     }),
     

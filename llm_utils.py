@@ -42,15 +42,14 @@ T = TypeVar("T", bound=BaseModel)
 class ParsedResponse(Generic[T]):
     """Class to hold both parsed and raw responses from LLM."""
 
-    parsed: T
+    parsed: Optional[T]
     raw: str
+    refusal: Optional[str] = None
 
 
 def call_openrouter(
     messages: Messages,
     model: str = "openai/gpt-4o-mini",
-    site_url: Optional[str] = None,
-    site_name: Optional[str] = None,
 ) -> str:
     """
     Make an API call to OpenRouter for standard text completion.
@@ -58,8 +57,6 @@ def call_openrouter(
     Args:
         messages: Instance of Messages class with conversation history
         model: Model to use (defaults to gpt-4o-mini)
-        site_url: Optional site URL for OpenRouter rankings
-        site_name: Optional site name for OpenRouter rankings
 
     Returns:
         A string response from the model
@@ -76,18 +73,10 @@ def call_openrouter(
         api_key=api_key,
     )
 
-    extra_headers = {}
-    if site_url:
-        extra_headers["HTTP-Referer"] = site_url
-    if site_name:
-        extra_headers["X-Title"] = site_name
-
     openai_messages = messages.to_openai_messages()
 
     # Standard non-structured response
-    completion = client.chat.completions.create(
-        extra_headers=extra_headers, model=model, messages=openai_messages
-    )
+    completion = client.chat.completions.create(model=model, messages=openai_messages)
 
     content = completion.choices[0].message.content
     if content is None:
@@ -99,8 +88,6 @@ def call_openrouter_structured(
     messages: Messages,
     response_model: Type[T],
     model: str = "openai/gpt-4o-mini",
-    site_url: Optional[str] = None,
-    site_name: Optional[str] = None,
 ) -> ParsedResponse[T]:
     """
     Make an API call to OpenRouter with structured output parsing.
@@ -109,11 +96,9 @@ def call_openrouter_structured(
         messages: Instance of Messages class with conversation history
         response_model: Pydantic model for structured output parsing
         model: Model to use (defaults to gpt-4o-mini)
-        site_url: Optional site URL for OpenRouter rankings
-        site_name: Optional site name for OpenRouter rankings
 
     Returns:
-        A ParsedResponse object containing both parsed model and raw string
+        A ParsedResponse object containing parsed model, raw string, and any refusal message
 
     Raises:
         ValueError: If OPEN_ROUTER_KEY environment variable is not set or if response has no content
@@ -127,31 +112,48 @@ def call_openrouter_structured(
         api_key=api_key,
     )
 
-    extra_headers = {}
-    if site_url:
-        extra_headers["HTTP-Referer"] = site_url
-    if site_name:
-        extra_headers["X-Title"] = site_name
-
     openai_messages = messages.to_openai_messages()
 
     # Use the parsing API - will raise exceptions if not available
     completion = client.beta.chat.completions.parse(
-        extra_headers=extra_headers,
         model=model,
         messages=openai_messages,
         response_format=response_model,
     )
 
-    # Get both parsed model and raw content
-    parsed_response = cast(T, completion.choices[0].message.parsed)
-    raw_response = completion.choices[0].message.content
+    message = completion.choices[0].message
+    raw_response = message.content
 
     if raw_response is None:
         raise ValueError("No content in response")
 
-    # Return both in a ParsedResponse object
+    # Check if the model refused to respond
+    refusal = getattr(message, "refusal", None)
+    if refusal:
+        return ParsedResponse(parsed=None, raw=raw_response, refusal=refusal)
+
+    # If no refusal, return the parsed response
+    parsed_response = cast(T, message.parsed)
     return ParsedResponse(parsed=parsed_response, raw=raw_response)
+
+
+def handle_structured_response_with_refusal(parsed_response: ParsedResponse[T]) -> None:
+    """
+    Example of how to handle a structured response that might contain a refusal.
+
+    Args:
+        parsed_response: A ParsedResponse object that might contain a refusal
+    """
+    if parsed_response.refusal:
+        print("Model refused to respond:")
+        print(parsed_response.refusal)
+    else:
+        print("Successfully parsed response:")
+        print(parsed_response.parsed)
+
+    # Raw response is always available
+    print("\nRaw response:")
+    print(parsed_response.raw)
 
 
 if __name__ == "__main__":
@@ -165,3 +167,25 @@ if __name__ == "__main__":
         print("Response:", response)
     except Exception as e:
         print("Test failed:", str(e))
+
+    # The following is an example of how you could use the structured output with refusal handling
+    # Uncomment and modify to test with an actual Pydantic model
+    """
+    from pydantic import BaseModel
+
+    class ExampleOutput(BaseModel):
+        answer: str
+        confidence: float
+
+    structured_messages = Messages()
+    structured_messages.add_system_message(
+        "You are a helpful assistant that provides structured outputs."
+    )
+    structured_messages.add_user_message("What is 2+2?")
+
+    try:
+        result = call_openrouter_structured(structured_messages, ExampleOutput)
+        handle_structured_response_with_refusal(result)
+    except Exception as e:
+        print("Structured test failed:", str(e))
+    """

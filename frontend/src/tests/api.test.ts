@@ -6,8 +6,12 @@ import { GameState, TerrainType } from '../models';
 const mockGameState: GameState = {
   mapGrid: Array(10).fill(Array(10).fill(TerrainType.LAND)),
   units: {
-    'A': { name: 'A', position: { x: 1, y: 1 } },
-    'B': { name: 'B', position: { x: 8, y: 8 } }
+    'A': { name: 'A', position: { x: 1, y: 1 }, player_id: 'p0' },
+    'B': { name: 'B', position: { x: 8, y: 8 }, player_id: 'p1' }
+  },
+  players: {
+    'p0': { id: 'p0', name: 'Player 1', color: '#F44336' },
+    'p1': { id: 'p1', name: 'Player 2', color: '#2196F3' }
   },
   coinPositions: [
     { x: 3, y: 3 },

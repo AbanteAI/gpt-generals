@@ -16,9 +16,15 @@ class TestPlayerController(unittest.TestCase):
         # Create a game with this map
         self.game = GameEngine(map_grid=self.test_map, num_coins=2)
 
+        # Get player IDs from the game
+        self.player1_id = "p0"
+        self.player2_id = "p1"
+
         # Override positions for predictable testing
         self.game.units["A"].position = (1, 1)
+        self.game.units["A"].player_id = self.player1_id
         self.game.units["B"].position = (3, 3)
+        self.game.units["B"].player_id = self.player2_id
 
         # Place coins at specific positions
         self.game.coin_positions = [(0, 0), (4, 4)]

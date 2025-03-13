@@ -8,14 +8,22 @@ export interface Position {
   y: number;
 }
 
+export interface Player {
+  id: string;
+  name: string;
+  color: string;
+}
+
 export interface Unit {
   name: string;
   position: Position;
+  player_id: string;
 }
 
 export interface GameState {
   mapGrid: TerrainType[][];
   units: Record<string, Unit>;
+  players: Record<string, Player>;
   coinPositions: Position[];
   turn: number;
 }
