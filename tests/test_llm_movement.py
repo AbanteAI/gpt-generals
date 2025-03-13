@@ -57,8 +57,8 @@ class TestLLMMovement(unittest.TestCase):
         # The map should show water at position (2,2)
         self.assertIn("~", description)
 
-    @patch("simulation.call_openrouter")
-    def test_unit_move_decision(self, mock_call_openrouter):
+    @patch("simulation.call_openrouter_structured")
+    def test_unit_move_decision(self, mock_call_openrouter_structured):
         """Test getting a move decision from the LLM (mocked)."""
         # Create a MoveDecision instance for the mock to return
         move_decision = MoveDecision(
@@ -74,16 +74,16 @@ class TestLLMMovement(unittest.TestCase):
         parsed_response = ParsedResponse(parsed=move_decision, raw=raw_response)
 
         # Set up the mock to return our ParsedResponse
-        mock_call_openrouter.return_value = parsed_response
+        mock_call_openrouter_structured.return_value = parsed_response
 
         # Get move decision for unit A
         response = get_unit_move_decision(self.game, "A")
 
         # Verify the mock was called
-        mock_call_openrouter.assert_called_once()
+        mock_call_openrouter_structured.assert_called_once()
 
-        # Check arguments to the call_openrouter method
-        args, kwargs = mock_call_openrouter.call_args
+        # Check arguments to the call_openrouter_structured method
+        args, kwargs = mock_call_openrouter_structured.call_args
         self.assertEqual(kwargs["model"], "openai/gpt-4o-mini")
         self.assertEqual(kwargs["response_model"], MoveDecision)
 
@@ -102,11 +102,11 @@ class TestLLMMovement(unittest.TestCase):
             )
             self.assertEqual(response.raw_response, raw_response)
 
-    @patch("simulation.call_openrouter")
-    def test_error_handling(self, mock_call_openrouter):
+    @patch("simulation.call_openrouter_structured")
+    def test_error_handling(self, mock_call_openrouter_structured):
         """Test error handling when the LLM call fails."""
         # Set the mock to raise an exception
-        mock_call_openrouter.side_effect = Exception("API error")
+        mock_call_openrouter_structured.side_effect = Exception("API error")
 
         # Get move decision for unit A - should return None but not crash
         response = get_unit_move_decision(self.game, "A")

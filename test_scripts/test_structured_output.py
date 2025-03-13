@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Local imports (must be after sys.path modification)
 # ruff: noqa: E402
 from game_engine import GameEngine
-from llm_utils import Messages, call_openrouter
+from llm_utils import Messages, call_openrouter_structured
 from map_generator import MapGenerator
 
 
@@ -119,10 +119,10 @@ def get_structured_game_analysis(game) -> Optional[GameAnalysisResponse]:
 
     try:
         # Call the API with structured output using our GameAnalysis model
-        response = call_openrouter(
+        response = call_openrouter_structured(
             messages=messages,
-            model="openai/gpt-4o-mini",  # You can change the model as needed
             response_model=GameAnalysis,
+            model="openai/gpt-4o-mini",  # You can change the model as needed
         )
 
         # The response is a ParsedResponse when response_model is provided

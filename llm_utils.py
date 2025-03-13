@@ -1,6 +1,6 @@
 import os
 from dataclasses import dataclass
-from typing import Dict, Generic, List, Optional, Type, TypeVar, Union, cast
+from typing import Dict, Generic, List, Optional, Type, TypeVar, cast
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -51,26 +51,21 @@ def call_openrouter(
     model: str = "openai/gpt-4o-mini",
     site_url: Optional[str] = None,
     site_name: Optional[str] = None,
-    response_model: Optional[Type[T]] = None,
-) -> Union[str, "ParsedResponse[T]"]:  # Forward reference for type checking
+) -> str:
     """
-    Make an API call to OpenRouter, optionally with structured output.
+    Make an API call to OpenRouter for standard text completion.
 
     Args:
         messages: Instance of Messages class with conversation history
         model: Model to use (defaults to gpt-4o-mini)
         site_url: Optional site URL for OpenRouter rankings
         site_name: Optional site name for OpenRouter rankings
-        response_model: Optional Pydantic model for structured output
 
     Returns:
-        Either:
-        - A string response when response_model is None
-        - A ParsedResponse object containing both parsed model and raw string
-          when response_model is provided
+        A string response from the model
 
     Raises:
-        ValueError: If OPEN_ROUTER_KEY environment variable is not set
+        ValueError: If OPEN_ROUTER_KEY environment variable is not set or if response has no content
     """
     api_key = os.getenv("OPEN_ROUTER_KEY")
     if not api_key:
@@ -89,39 +84,78 @@ def call_openrouter(
 
     openai_messages = messages.to_openai_messages()
 
-    # If a response model is provided, use structured output
-    if response_model:
-        # Use the parsing API - will raise exceptions if not available
-        completion = client.beta.chat.completions.parse(
-            extra_headers=extra_headers,
-            model=model,
-            messages=openai_messages,
-            response_format=response_model,
-        )
+    # Standard non-structured response
+    completion = client.chat.completions.create(
+        extra_headers=extra_headers, model=model, messages=openai_messages
+    )
 
-        # Get both parsed model and raw content
-        parsed_response = cast(T, completion.choices[0].message.parsed)
-        raw_response = completion.choices[0].message.content
+    content = completion.choices[0].message.content
+    if content is None:
+        raise ValueError("No content in response")
+    return content
 
-        if raw_response is None:
-            raise ValueError("No content in response")
 
-        # Return both in a ParsedResponse object
-        return ParsedResponse(parsed=parsed_response, raw=raw_response)
-    else:
-        # Standard non-structured response
-        completion = client.chat.completions.create(
-            extra_headers=extra_headers, model=model, messages=openai_messages
-        )
+def call_openrouter_structured(
+    messages: Messages,
+    response_model: Type[T],
+    model: str = "openai/gpt-4o-mini",
+    site_url: Optional[str] = None,
+    site_name: Optional[str] = None,
+) -> ParsedResponse[T]:
+    """
+    Make an API call to OpenRouter with structured output parsing.
 
-        content = completion.choices[0].message.content
-        if content is None:
-            raise ValueError("No content in response")
-        return content
+    Args:
+        messages: Instance of Messages class with conversation history
+        response_model: Pydantic model for structured output parsing
+        model: Model to use (defaults to gpt-4o-mini)
+        site_url: Optional site URL for OpenRouter rankings
+        site_name: Optional site name for OpenRouter rankings
+
+    Returns:
+        A ParsedResponse object containing both parsed model and raw string
+
+    Raises:
+        ValueError: If OPEN_ROUTER_KEY environment variable is not set or if response has no content
+    """
+    api_key = os.getenv("OPEN_ROUTER_KEY")
+    if not api_key:
+        raise ValueError("OPEN_ROUTER_KEY environment variable must be set")
+
+    client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=api_key,
+    )
+
+    extra_headers = {}
+    if site_url:
+        extra_headers["HTTP-Referer"] = site_url
+    if site_name:
+        extra_headers["X-Title"] = site_name
+
+    openai_messages = messages.to_openai_messages()
+
+    # Use the parsing API - will raise exceptions if not available
+    completion = client.beta.chat.completions.parse(
+        extra_headers=extra_headers,
+        model=model,
+        messages=openai_messages,
+        response_format=response_model,
+    )
+
+    # Get both parsed model and raw content
+    parsed_response = cast(T, completion.choices[0].message.parsed)
+    raw_response = completion.choices[0].message.content
+
+    if raw_response is None:
+        raise ValueError("No content in response")
+
+    # Return both in a ParsedResponse object
+    return ParsedResponse(parsed=parsed_response, raw=raw_response)
 
 
 if __name__ == "__main__":
-    # Test the function using the new Messages class
+    # Test the standard function using the Messages class
     test_messages = Messages()
     test_messages.add_user_message("What is the meaning of life?")
 
