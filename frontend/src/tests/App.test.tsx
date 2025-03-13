@@ -86,10 +86,10 @@ describe('App', () => {
     expect(titleElement).toBeInTheDocument();
   });
 
-  it('shows loading state initially', () => {
+  it('displays the game state immediately with our mock', () => {
     render(<App />);
-    const loadingElement = screen.getByText(/Waiting for game state|Connecting to server/i);
-    expect(loadingElement).toBeInTheDocument();
+    const turnText = screen.getByText(/Turn: 1/i);
+    expect(turnText).toBeInTheDocument();
   });
 
   it('displays turn number after loading', async () => {
