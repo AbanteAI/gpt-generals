@@ -20,21 +20,29 @@ describe('GameBoard', () => {
 
   it('renders grid with correct number of cells', () => {
     const { container } = render(<GameBoard gameState={mockGameState} />);
-    const gridItems = container.querySelectorAll('.MuiGrid-item');
-    expect(gridItems.length).toBe(4); // 2x2 grid
+    // Find all direct children of the grid container (the cell elements)
+    const gridContainer = container.querySelector('[style*="display: grid"]');
+    const gridCells = gridContainer ? gridContainer.children : [];
+    expect(gridCells.length).toBe(4); // 2x2 grid
   });
 
   it('displays unit in correct position', () => {
     const { container } = render(<GameBoard gameState={mockGameState} />);
-    const gridItems = container.querySelectorAll('.MuiGrid-item');
-    const unitCell = gridItems[0];
+    // Get all grid cells
+    const gridContainer = container.querySelector('[style*="display: grid"]');
+    const gridCells = Array.from(gridContainer?.children || []);
+    // First cell should have unit A (position 0,0)
+    const unitCell = gridCells[0];
     expect(unitCell.textContent).toBe('A');
   });
 
   it('displays coin in correct position', () => {
     const { container } = render(<GameBoard gameState={mockGameState} />);
-    const gridItems = container.querySelectorAll('.MuiGrid-item');
-    const coinCell = gridItems[3];
+    // Get all grid cells
+    const gridContainer = container.querySelector('[style*="display: grid"]');
+    const gridCells = Array.from(gridContainer?.children || []);
+    // Last cell should have coin (position 1,1 is the 4th element in row-major order)
+    const coinCell = gridCells[3];
     expect(coinCell.textContent).toBe('c');
   });
 });
