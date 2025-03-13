@@ -1,4 +1,4 @@
-import { GameState, TerrainType, Position, Unit } from './models';
+import { GameState, TerrainType, Position, Unit, ChatMessage, ChatHistory } from './models';
 
 // Default WebSocket server URL
 const DEFAULT_WS_URL = 'ws://localhost:8765';
@@ -7,7 +7,9 @@ const DEFAULT_WS_URL = 'ws://localhost:8765';
 export class GameClient {
   private ws: WebSocket | null = null;
   private gameState: GameState | null = null;
-  private listeners: ((gameState: GameState) => void)[] = [];
+  private chatHistory: ChatHistory = { messages: [] };
+  private gameStateListeners: ((gameState: GameState) => void)[] = [];
+  private chatHistoryListeners: ((chatHistory: ChatHistory) => void)[] = [];
   private connectionListeners: ((connected: boolean) => void)[] = [];
   private isConnected: boolean = false;
   private reconnectTimer: number | null = null;
@@ -17,9 +19,14 @@ export class GameClient {
     return this.gameState;
   }
 
+  // Get the current chat history
+  public getCurrentChatHistory(): ChatHistory {
+    return this.chatHistory;
+  }
+
   // Subscribe to game state changes
   public subscribeToGameState(callback: (gameState: GameState) => void): () => void {
-    this.listeners.push(callback);
+    this.gameStateListeners.push(callback);
     
     // If we already have game state, call the callback immediately
     if (this.gameState) {
@@ -28,7 +35,20 @@ export class GameClient {
     
     // Return unsubscribe function
     return () => {
-      this.listeners = this.listeners.filter(cb => cb !== callback);
+      this.gameStateListeners = this.gameStateListeners.filter(cb => cb !== callback);
+    };
+  }
+
+  // Subscribe to chat history changes
+  public subscribeToChatHistory(callback: (chatHistory: ChatHistory) => void): () => void {
+    this.chatHistoryListeners.push(callback);
+    
+    // Call with current chat history immediately
+    callback(this.chatHistory);
+    
+    // Return unsubscribe function
+    return () => {
+      this.chatHistoryListeners = this.chatHistoryListeners.filter(cb => cb !== callback);
     };
   }
 
@@ -87,6 +107,78 @@ export class GameClient {
     this.ws.send(JSON.stringify(message));
   }
 
+  // Send a chat message
+  public sendChatMessage(
+    sender: string,
+    content: string,
+    senderType: 'player' | 'system' | 'unit' = 'player'
+  ): Promise<boolean> {
+    return new Promise((resolve) => {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        console.error('Cannot send chat message: WebSocket is not connected');
+        resolve(false);
+        return;
+      }
+      
+      const message = {
+        command: 'chat',
+        sender,
+        content,
+        sender_type: senderType
+      };
+      
+      try {
+        this.ws.send(JSON.stringify(message));
+        
+        // Add message to local chat history immediately for responsiveness
+        // The server will broadcast this message back to all clients including us
+        const newMessage: ChatMessage = {
+          sender,
+          content,
+          timestamp: Date.now(),
+          senderType
+        };
+        
+        this.chatHistory = {
+          messages: [...this.chatHistory.messages, newMessage]
+        };
+        
+        // Notify listeners
+        this.chatHistoryListeners.forEach(listener => listener(this.chatHistory));
+        
+        resolve(true);
+      } catch (error) {
+        console.error('Error sending chat message:', error);
+        resolve(false);
+      }
+    });
+  }
+
+  // Move a unit
+  public moveUnit(unitName: string, direction: 'up' | 'down' | 'left' | 'right'): Promise<boolean> {
+    return new Promise((resolve) => {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        console.error('Cannot move unit: WebSocket is not connected');
+        resolve(false);
+        return;
+      }
+      
+      const message = {
+        command: 'move',
+        unit_name: unitName,
+        direction
+      };
+      
+      try {
+        this.ws.send(JSON.stringify(message));
+        resolve(true);
+      } catch (error) {
+        console.error('Error moving unit:', error);
+        resolve(false);
+      }
+    });
+  }
+
   // Handle WebSocket open event
   private handleOpen(): void {
     console.log('WebSocket connection established');
@@ -104,45 +196,70 @@ export class GameClient {
     try {
       const data = JSON.parse(event.data);
       
-      // Check if it's a game state message
+      // Handle different message types
       if (data.type === 'game_state') {
-        // Convert terrain types from strings to enum values
-        const mapGrid = data.map_grid.map((row: string[]) => 
-          row.map((cell: string) => cell === 'WATER' ? TerrainType.WATER : TerrainType.LAND)
-        );
-        
-        // Convert unit positions to the expected format
-        const units: Record<string, Unit> = {};
-        Object.entries(data.units).forEach(([key, value]: [string, any]) => {
-          units[key] = {
-            name: value.name,
-            position: { x: value.position[0], y: value.position[1] }
-          };
-        });
-        
-        // Convert coin positions to the expected format
-        const coinPositions: Position[] = data.coin_positions.map(
-          (pos: [number, number]) => ({ x: pos[0], y: pos[1] })
-        );
-        
-        // Create new game state
-        this.gameState = {
-          mapGrid,
-          units,
-          coinPositions,
-          turn: data.current_turn
-        };
-        
-        // Notify all listeners with the non-null game state
-        if (this.gameState) {
-          this.listeners.forEach(listener => listener(this.gameState));
-        }
+        this.handleGameStateMessage(data);
+      } else if (data.type === 'chat_message') {
+        this.handleChatMessage(data);
       } else if (data.type === 'error') {
         console.error('Server error:', data.message);
       }
     } catch (error) {
       console.error('Error parsing WebSocket message:', error);
     }
+  }
+
+  // Handle game state messages
+  private handleGameStateMessage(data: any): void {
+    // Convert terrain types from strings to enum values
+    const mapGrid = data.map_grid.map((row: string[]) => 
+      row.map((cell: string) => cell === 'WATER' ? TerrainType.WATER : TerrainType.LAND)
+    );
+    
+    // Convert unit positions to the expected format
+    const units: Record<string, Unit> = {};
+    Object.entries(data.units).forEach(([key, value]: [string, any]) => {
+      units[key] = {
+        name: value.name,
+        position: { x: value.position[0], y: value.position[1] }
+      };
+    });
+    
+    // Convert coin positions to the expected format
+    const coinPositions: Position[] = data.coin_positions.map(
+      (pos: [number, number]) => ({ x: pos[0], y: pos[1] })
+    );
+    
+    // Create new game state
+    this.gameState = {
+      mapGrid,
+      units,
+      coinPositions,
+      turn: data.current_turn
+    };
+    
+    // Notify all listeners with the non-null game state
+    if (this.gameState) {
+      this.gameStateListeners.forEach(listener => listener(this.gameState));
+    }
+  }
+
+  // Handle chat messages
+  private handleChatMessage(data: any): void {
+    const message: ChatMessage = {
+      sender: data.sender,
+      content: data.content,
+      timestamp: data.timestamp ? parseInt(data.timestamp) * 1000 : Date.now(),
+      senderType: data.sender_type || 'player'
+    };
+    
+    // Add to chat history
+    this.chatHistory = {
+      messages: [...this.chatHistory.messages, message]
+    };
+    
+    // Notify listeners
+    this.chatHistoryListeners.forEach(listener => listener(this.chatHistory));
   }
 
   // Handle WebSocket close event
@@ -204,4 +321,26 @@ export async function getGameState(): Promise<GameState> {
       }
     }
   });
+}
+
+// Helper function to get chat history
+export async function getChatHistory(): Promise<ChatHistory> {
+  return gameClient.getCurrentChatHistory();
+}
+
+// Helper function to send a chat message
+export async function sendChatMessage(
+  sender: string,
+  content: string,
+  senderType: 'player' | 'system' | 'unit' = 'player'
+): Promise<boolean> {
+  return gameClient.sendChatMessage(sender, content, senderType);
+}
+
+// Helper function to move a unit
+export async function moveUnit(
+  unitName: string,
+  direction: 'up' | 'down' | 'left' | 'right'
+): Promise<boolean> {
+  return gameClient.moveUnit(unitName, direction);
 }
