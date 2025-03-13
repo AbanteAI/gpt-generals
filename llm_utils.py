@@ -117,6 +117,7 @@ def call_openrouter_structured(
 
     Raises:
         ValueError: If OPEN_ROUTER_KEY environment variable is not set or if response has no content
+        Exception: If parsing fails or API call fails
     """
     api_key = os.getenv("OPEN_ROUTER_KEY")
     if not api_key:
@@ -135,23 +136,75 @@ def call_openrouter_structured(
 
     openai_messages = messages.to_openai_messages()
 
-    # Use the parsing API - will raise exceptions if not available
-    completion = client.beta.chat.completions.parse(
-        extra_headers=extra_headers,
-        model=model,
-        messages=openai_messages,
-        response_format=response_model,
-    )
+    try:
+        # Try to use the parsing API - will raise exceptions if not available
+        completion = client.beta.chat.completions.parse(
+            extra_headers=extra_headers,
+            model=model,
+            messages=openai_messages,
+            response_format=response_model,
+        )
 
-    # Get both parsed model and raw content
-    parsed_response = cast(T, completion.choices[0].message.parsed)
-    raw_response = completion.choices[0].message.content
+        # Get both parsed model and raw content
+        # Check if choices and message exist before accessing
+        if not completion.choices:
+            raise ValueError("No choices in API response")
 
-    if raw_response is None:
-        raise ValueError("No content in response")
+        # Safely access the parsed response
+        message = completion.choices[0].message
+        if not hasattr(message, "parsed") or message.parsed is None:
+            raise ValueError("No parsed data in API response")
 
-    # Return both in a ParsedResponse object
-    return ParsedResponse(parsed=parsed_response, raw=raw_response)
+        parsed_response = cast(T, message.parsed)
+
+        # The raw content might be None, which is okay - we'll handle it later
+        raw_response = message.content
+
+        # Return both in a ParsedResponse object
+        return ParsedResponse(parsed=parsed_response, raw=raw_response or "")
+
+    except Exception as e:
+        # If parsing fails, fall back to standard completion and handle the response manually
+        print(f"Structured parsing failed: {e}. Falling back to standard completion.")
+
+        try:
+            # Standard non-structured response
+            completion = client.chat.completions.create(
+                extra_headers=extra_headers, model=model, messages=openai_messages
+            )
+
+            raw_content = completion.choices[0].message.content
+            if raw_content is None:
+                raise ValueError("No content in fallback response")
+
+            # Try to parse the raw content manually into our model
+            try:
+                import json
+
+                from pydantic import ValidationError
+
+                # Try to extract JSON from the text response
+                # Look for content between ```json and ``` or just parse the whole thing
+                json_content = raw_content
+                if "```json" in raw_content and "```" in raw_content.split("```json")[1]:
+                    json_part = raw_content.split("```json")[1].split("```")[0].strip()
+                    json_content = json_part
+
+                # Parse as JSON and create model
+                data = json.loads(json_content)
+                parsed_model = response_model.parse_obj(data)
+
+                return ParsedResponse(parsed=parsed_model, raw=raw_content)
+
+            except (json.JSONDecodeError, ValidationError) as json_err:
+                # If manual parsing fails, raise a detailed error
+                raise ValueError(
+                    f"Failed to parse response as {response_model.__name__}: {json_err}. Response: {raw_content}"
+                )
+
+        except Exception as fallback_err:
+            # If both methods fail, raise with details
+            raise Exception(f"Both structured and fallback parsing failed: {fallback_err}")
 
 
 if __name__ == "__main__":

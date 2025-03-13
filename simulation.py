@@ -331,11 +331,14 @@ def run_simulation(num_turns: int = 10, use_custom_map: bool = False, use_llm: b
                     print(f"Unit {unit_name} reasoning: {response.decision.reasoning}")
 
                     # Debug information about raw response (can be commented out in production)
-                    if len(response.raw_response) > 200:
-                        raw_preview = response.raw_response[:200] + "..."
+                    if response.raw_response is not None:
+                        if len(response.raw_response) > 200:
+                            raw_preview = response.raw_response[:200] + "..."
+                        else:
+                            raw_preview = response.raw_response
+                        print(f"Raw response preview: {raw_preview}")
                     else:
-                        raw_preview = response.raw_response
-                    print(f"Raw response preview: {raw_preview}")
+                        print("Raw response is None")
                 else:
                     # Fall back to random if LLM fails
                     direction = random.choice(directions)
