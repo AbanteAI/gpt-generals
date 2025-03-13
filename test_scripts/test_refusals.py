@@ -27,7 +27,8 @@ def test_normal_case():
     """Test a normal math problem that should produce a valid structured response."""
     messages = Messages()
     messages.add_system_message(
-        "You are a helpful math tutor. Solve the problem step by step and provide a structured response."
+        "You are a helpful math tutor. Solve the problem step by step "
+        "and provide a structured response."
     )
     messages.add_user_message("What is the value of 3x + 7 = 22? Solve for x.")
 
@@ -43,7 +44,8 @@ def test_refusal_case():
     """Test a case that might trigger a refusal due to content policy reasons."""
     messages = Messages()
     messages.add_system_message(
-        "You are a helpful math tutor. Solve the problem step by step and provide a structured response."
+        "You are a helpful math tutor. Solve the problem step by step "
+        "and provide a structured response."
     )
     # This prompt is designed to potentially trigger a refusal as it's asking for something
     # that doesn't fit the math solution structure or is potentially problematic

@@ -172,15 +172,17 @@ if __name__ == "__main__":
     # Uncomment and modify to test with an actual Pydantic model
     """
     from pydantic import BaseModel
-    
+
     class ExampleOutput(BaseModel):
         answer: str
         confidence: float
-    
+
     structured_messages = Messages()
-    structured_messages.add_system_message("You are a helpful assistant that provides structured outputs.")
+    structured_messages.add_system_message(
+        "You are a helpful assistant that provides structured outputs."
+    )
     structured_messages.add_user_message("What is 2+2?")
-    
+
     try:
         result = call_openrouter_structured(structured_messages, ExampleOutput)
         handle_structured_response_with_refusal(result)
