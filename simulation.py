@@ -5,7 +5,7 @@ from typing import NamedTuple, Optional, Tuple
 from pydantic import BaseModel, Field
 
 from game_engine import GameEngine
-from llm_utils import Messages, call_openrouter
+from llm_utils import Messages, call_openrouter_structured
 from map_generator import MapGenerator, TerrainType
 
 
@@ -261,10 +261,10 @@ def get_unit_move_decision(game: GameEngine, unit_name: str) -> Optional[MoveDec
 
     try:
         # Call the API with structured output using our MoveDecision model
-        response = call_openrouter(
+        response = call_openrouter_structured(
             messages=messages,
-            model="openai/gpt-4o-mini",
             response_model=MoveDecision,
+            model="openai/gpt-4o-mini",
         )
 
         # The response is a ParsedResponse when response_model is provided
