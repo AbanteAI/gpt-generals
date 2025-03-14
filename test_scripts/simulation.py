@@ -3,7 +3,6 @@
 Simulation script for the GPT Generals game.
 
 This script can run simulations with either LLM-based movement (default) or random movement.
-LLM-based units will try to collect coins efficiently based on AI reasoning about the game state.
 """
 
 import argparse
@@ -17,99 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Local imports (must be after sys.path modification)
 # ruff: noqa: E402
 from game_engine import GameEngine
-from llm_utils import Messages, call_openrouter
 from map_generator import MapGenerator
-
-
-def create_llm_prompt(game: GameEngine, unit_name: str) -> str:
-    """
-    Create a prompt for the LLM to decide movement for a unit.
-
-    Args:
-        game: Current game engine instance
-        unit_name: Name of the unit to move
-
-    Returns:
-        A prompt string describing the game state and asking for movement direction
-    """
-    map_render = game.render_map()
-
-    # Get unit position
-    unit = game.units[unit_name]
-    unit_pos = unit.position
-
-    # Get coin positions from the game engine
-    coin_positions = game.coin_positions
-
-    prompt = f"""
-You are playing a strategic game where you need to collect coins efficiently.
-
-GAME STATE:
-Current Turn: {game.current_turn}
-Map:
-{map_render}
-
-Your unit '{unit_name}' is at position {unit_pos}.
-Available coins are at positions: {coin_positions}
-
-RULES:
-- Units can move up, down, left, or right (if not blocked by water or map edge)
-- The goal is to collect as many coins as possible
-- Each unit can move once per turn
-
-TASK:
-Choose the best direction to move unit '{unit_name}'. Consider the following:
-1. Distance to nearest coins
-2. Avoiding water (~ tiles)
-3. Optimizing path efficiency
-
-Respond with ONLY ONE of these directions: "up", "down", "left", or "right"
-"""
-    return prompt
-
-
-def get_llm_direction(game: GameEngine, unit_name: str) -> str:
-    """
-    Use an LLM to determine the best direction for a unit to move.
-
-    Args:
-        game: Current game engine instance
-        unit_name: Name of the unit to move
-
-    Returns:
-        A direction string ("up", "down", "left", or "right")
-    """
-    directions = ["up", "down", "left", "right"]
-
-    try:
-        # Create messages for LLM
-        messages = Messages()
-        messages.add_system_message(
-            "You are a strategic game-playing assistant that chooses optimal moves."
-        )
-        messages.add_user_message(create_llm_prompt(game, unit_name))
-
-        # Get LLM response
-        response = call_openrouter(messages)
-
-        # Parse the response to extract direction
-        response = response.strip().lower()
-
-        # Check if any of the valid directions appear in the response
-        for direction in directions:
-            if direction in response:
-                return direction
-
-        # If no valid direction found, use a random one
-        print(
-            f"LLM response didn't contain a valid direction: '{response}'. Using random direction."
-        )
-        return random.choice(directions)
-
-    except Exception as e:
-        # In case of any error (API issues, etc.), fall back to random
-        print(f"Error using LLM for movement: {e}. Using random direction instead.")
-        return random.choice(directions)
 
 
 def run_simulation(num_turns: int = 10, use_custom_map: bool = False, use_llm: bool = True):
@@ -147,7 +54,8 @@ def run_simulation(num_turns: int = 10, use_custom_map: bool = False, use_llm: b
         for unit_name in game.units:
             # Get movement direction (either from LLM or random)
             if use_llm:
-                direction = get_llm_direction(game, unit_name)
+                # Just use random for now, but later this will use LLM
+                direction = random.choice(directions)
             else:
                 direction = random.choice(directions)
 
