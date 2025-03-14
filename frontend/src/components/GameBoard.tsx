@@ -1,11 +1,32 @@
 import React, { useState } from 'react';
-import { Box, IconButton, Paper, Grid } from '@mui/material';
+import { Box, IconButton, Paper, Grid, Tooltip } from '@mui/material';
 import { GameState, TerrainType } from '../models';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import ViewInArIcon from '@mui/icons-material/ViewInAr';
+import LanguageIcon from '@mui/icons-material/Language';
 import { moveUnit } from '../api';
+import { keyframes } from '@emotion/react';
+
+// Define animations
+const coinRotate = keyframes`
+  0% { transform: rotateY(0deg); }
+  100% { transform: rotateY(360deg); }
+`;
+
+const waterWave = keyframes`
+  0% { background-position: 0 0; }
+  50% { background-position: 10px 0; }
+  100% { background-position: 0 0; }
+`;
+
+const robotHover = keyframes`
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+  100% { transform: translateY(0); }
+`;
 
 interface GameBoardProps {
   gameState: GameState;
@@ -19,6 +40,7 @@ interface UnitAtPosition {
 export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
   const { mapGrid, units, players, coinPositions } = gameState;
   const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'flat' | 'isometric'>('flat');
   
   // Calculate grid dimensions
   const gridHeight = mapGrid.length;
@@ -55,6 +77,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
     }
   };
 
+  const toggleViewMode = () => {
+    setViewMode(viewMode === 'flat' ? 'isometric' : 'flat');
+  };
+
   // Get color for terrain
   const getTerrainColor = (cell: TerrainType) => {
     return cell === TerrainType.WATER ? '#0077BE' : '#8BC34A';
@@ -64,17 +90,23 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
   const reversedMapGrid = [...mapGrid].reverse();
   
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, position: 'relative' }}>
       <Box
         data-testid="game-grid"
         sx={{
           display: 'grid',
           gridTemplateColumns: `repeat(${gridWidth}, 30px)`,
           gridTemplateRows: `repeat(${gridHeight}, 30px)`,
-          gap: '2px',
+          gap: viewMode === 'isometric' ? '1px' : '2px',
           backgroundColor: '#ccc',
           padding: '2px',
           border: '1px solid #999',
+          transformStyle: 'preserve-3d',
+          transform: viewMode === 'isometric' ? 'rotateX(60deg) rotateZ(45deg)' : 'none',
+          transformOrigin: 'center center',
+          transition: 'transform 0.5s ease',
+          perspective: '1000px',
+          marginTop: viewMode === 'isometric' ? '50px' : '0',
         }}
       >
         {reversedMapGrid.map((row, reversedY) => {
@@ -113,6 +145,22 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                       alignItems: 'center',
                       justifyContent: 'center',
                       backgroundColor,
+                      ...(viewMode === 'isometric' && {
+                        position: 'relative',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                        transition: 'all 0.3s ease',
+                        '::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundColor: 'rgba(0,0,0,0.1)',
+                          transform: 'translateZ(-5px) translateY(5px)',
+                          zIndex: -1,
+                        }
+                      }),
                       ...(isSelected && { 
                         border: '2px solid yellow',
                         boxSizing: 'border-box'
@@ -120,14 +168,68 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                       fontWeight: 'bold',
                       color: unitAtPos ? '#fff' : (hasCoin ? '#000' : undefined),
                       cursor: unitAtPos ? 'pointer' : 'default',
-                      // For water, add wave pattern
-                      ...(isWater && !unitAtPos && !hasCoin && {
+                      
+                      // Isometric view enhancements
+                      ...(isWater && !unitAtPos && !hasCoin && viewMode === 'isometric' && {
+                        animation: `${waterWave} 3s infinite linear`,
+                        backgroundImage: 'linear-gradient(45deg, #0077BE 25%, #0099FF 50%, #0077BE 75%)',
+                        backgroundSize: '20px 20px',
+                      }),
+                      
+                      // Regular flat view water styling
+                      ...(isWater && !unitAtPos && !hasCoin && viewMode === 'flat' && {
                         backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.2) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.2) 75%, transparent 75%, transparent)',
                         backgroundSize: '10px 10px'
+                      }),
+                      
+                      // Coin animations in isometric view
+                      ...(hasCoin && viewMode === 'isometric' && {
+                        animation: `${coinRotate} 2s infinite linear`,
+                        borderRadius: '50%',
+                        boxShadow: '0 0 5px rgba(255, 215, 0, 0.7)',
+                        // Replace text 'c' with a circle
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          width: '16px',
+                          height: '16px',
+                          borderRadius: '50%',
+                          backgroundColor: '#FFD700',
+                          border: '2px solid #B8860B',
+                        }
+                      }),
+                      
+                      // Unit styling in isometric view
+                      ...(unitAtPos && viewMode === 'isometric' && {
+                        animation: `${robotHover} 2s infinite ease-in-out`,
+                        // Replace text with a robot shape
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '2px',
+                          backgroundColor: unitAtPos.color,
+                          border: '1px solid rgba(0,0,0,0.3)',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                          zIndex: 1,
+                        },
+                        // Robot eyes
+                        '&::after': {
+                          content: '""',
+                          position: 'absolute',
+                          width: '10px',
+                          height: '4px',
+                          borderRadius: '1px',
+                          backgroundColor: 'rgba(255,255,255,0.8)',
+                          zIndex: 2,
+                          top: '8px',
+                        }
                       })
                     }}
                   >
-                    {unitAtPos ? unitAtPos.name : (hasCoin ? 'c' : '')}
+                    {/* Only show text labels in flat view */}
+                    {viewMode === 'flat' && (unitAtPos ? unitAtPos.name : (hasCoin ? 'c' : ''))}
                   </Box>
                 );
               })}
@@ -179,6 +281,26 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
           </Grid>
         </Grid>
       </Paper>
+
+      {/* View mode toggle button */}
+      <Tooltip title={`Switch to ${viewMode === 'flat' ? 'isometric' : 'flat'} view`}>
+        <IconButton 
+          onClick={toggleViewMode}
+          color="primary"
+          sx={{ 
+            position: 'fixed', 
+            bottom: 16, 
+            right: 16,
+            backgroundColor: 'white',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+            '&:hover': {
+              backgroundColor: '#f5f5f5'
+            }
+          }}
+        >
+          {viewMode === 'flat' ? <ViewInArIcon /> : <LanguageIcon />}
+        </IconButton>
+      </Tooltip>
     </Box>
   );
 };

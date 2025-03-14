@@ -53,3 +53,75 @@ body {
   font-size: 16px;
   font-weight: bold;
 }
+
+/* Isometric View Styles */
+.isometric-grid {
+  transform-style: preserve-3d;
+  transform: rotateX(60deg) rotateZ(45deg);
+  transform-origin: center center;
+  transition: transform 0.5s ease;
+  perspective: 1000px;
+}
+
+.isometric-cell {
+  position: relative;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: all 0.3s ease;
+}
+
+.isometric-cell::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0,0,0,0.1);
+  transform: translateZ(-5px) translateY(5px);
+  z-index: -1;
+}
+
+@keyframes coin-rotate {
+  0% { transform: rotateY(0deg); }
+  100% { transform: rotateY(360deg); }
+}
+
+@keyframes water-wave {
+  0% { background-position: 0 0; }
+  50% { background-position: 10px 0; }
+  100% { background-position: 0 0; }
+}
+
+@keyframes robot-hover {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+  100% { transform: translateY(0); }
+}
+
+.isometric-coin {
+  animation: coin-rotate 2s infinite linear;
+  border-radius: 50%;
+  box-shadow: 0 0 5px rgba(255, 215, 0, 0.7);
+}
+
+.isometric-water {
+  animation: water-wave 3s infinite linear;
+  background-image: linear-gradient(45deg, #0077BE 25%, #0099FF 50%, #0077BE 75%);
+  background-size: 20px 20px;
+}
+
+.isometric-unit {
+  animation: robot-hover 2s infinite ease-in-out;
+}
+
+.view-mode-toggle {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  background-color: white;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
+.view-mode-toggle:hover {
+  background-color: #f5f5f5;
+}
