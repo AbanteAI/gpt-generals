@@ -5,24 +5,32 @@ import {
   Card, 
   CardActions, 
   CardContent, 
+  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   Divider, 
   FormControl,
+  FormControlLabel,
   Grid, 
   IconButton,
+  InputAdornment,
   InputLabel,
   MenuItem,
   Paper, 
   Select,
+  Snackbar,
   TextField, 
+  Tooltip,
   Typography,
   CircularProgress,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import SearchIcon from '@mui/icons-material/Search';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { gameClient } from '../api';
 import { GameRoom, LobbyPlayer, PLAYER_COLORS } from '../models';
 
@@ -44,11 +52,31 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   const [openCreateDialog, setOpenCreateDialog] = useState<boolean>(false);
   const [roomName, setRoomName] = useState<string>(`${playerName}'s Room`);
   const [selectedColor, setSelectedColor] = useState<string>(PLAYER_COLORS[0]);
+  const [isRoomVisible, setIsRoomVisible] = useState<boolean>(true);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [copyLinkSnackbarOpen, setCopyLinkSnackbarOpen] = useState<boolean>(false);
   
   // Load lobby state on component mount and periodically
   useEffect(() => {
     fetchLobbyState();
     const interval = setInterval(fetchLobbyState, 5000);
+    
+    // Check URL for direct room join
+    const checkUrlForRoomId = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const roomId = urlParams.get('room');
+      
+      if (roomId) {
+        // Remove the room parameter from URL to avoid rejoining on refresh
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+        
+        // Attempt to join the room
+        handleJoinRoom(roomId);
+      }
+    };
+    
+    checkUrlForRoomId();
     
     return () => {
       clearInterval(interval);
@@ -100,7 +128,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   const handleCreateRoom = async () => {
     try {
       setIsLoading(true);
-      const success = await gameClient.createRoom(roomName, playerName, selectedColor);
+      const success = await gameClient.createRoom(roomName, playerName, selectedColor, isRoomVisible);
       if (success) {
         setOpenCreateDialog(false);
         fetchLobbyState();
@@ -213,6 +241,34 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
       </Box>
     );
   };
+  
+  // Generate a shareable link for the current room
+  const getShareableLink = (roomId: string) => {
+    const baseUrl = window.location.href.split('?')[0];
+    return `${baseUrl}?room=${roomId}`;
+  };
+  
+  // Copy shareable link to clipboard
+  const copyShareableLink = (roomId: string) => {
+    const link = getShareableLink(roomId);
+    navigator.clipboard.writeText(link).then(() => {
+      setCopyLinkSnackbarOpen(true);
+    });
+  };
+  
+  // Filter rooms based on search query
+  const filterRooms = (rooms: GameRoom[]) => {
+    if (!searchQuery) return rooms;
+    
+    const query = searchQuery.toLowerCase();
+    return rooms.filter(room => {
+      // Search by room name
+      if (room.name.toLowerCase().includes(query)) return true;
+      
+      // Search by player name
+      return room.players.some(player => player.name.toLowerCase().includes(query));
+    });
+  };
 
   // Game configuration state
   const [gameConfig, setGameConfig] = useState({
@@ -264,9 +320,24 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
     return (
       <Box sx={{ maxWidth: 800, mx: 'auto', mt: 4 }}>
         <Paper elevation={3} sx={{ p: 3 }}>
-          <Typography variant="h5" gutterBottom>
-            Room: {currentRoom.name}
-          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Typography variant="h5">
+                Room: {currentRoom.name}
+              </Typography>
+              {currentRoom.visible === false && (
+                <Tooltip title="This room is hidden from the lobby list">
+                  <VisibilityOffIcon sx={{ ml: 1, color: 'text.secondary' }} />
+                </Tooltip>
+              )}
+            </Box>
+            
+            <Tooltip title="Copy invite link">
+              <IconButton onClick={() => copyShareableLink(currentRoom.id)}>
+                <ContentCopyIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
           
           <Divider sx={{ my: 2 }} />
           
@@ -425,6 +496,13 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
             </Box>
           </Box>
         </Paper>
+        
+        <Snackbar
+          open={copyLinkSnackbarOpen}
+          autoHideDuration={3000}
+          onClose={() => setCopyLinkSnackbarOpen(false)}
+          message="Room link copied to clipboard"
+        />
       </Box>
     );
   }
@@ -449,6 +527,24 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
             {isLoading ? <CircularProgress size={24} /> : <RefreshIcon />}
           </IconButton>
         </Box>
+      </Box>
+      
+      {/* Search bar */}
+      <Box sx={{ mb: 3 }}>
+        <TextField
+          fullWidth
+          placeholder="Search by room or player name"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          variant="outlined"
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+        />
       </Box>
       
       {error && (
@@ -514,15 +610,25 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
         Available Rooms
       </Typography>
       
-      {rooms.length === 0 ? (
-        <Paper elevation={2} sx={{ p: 3, textAlign: 'center' }}>
-          <Typography variant="body1" color="textSecondary">
-            No rooms available. Create a new room to start playing!
-          </Typography>
-        </Paper>
-      ) : (
-        <Grid container spacing={3}>
-          {rooms.map((room) => (
+      {/* Filter rooms */}
+      {(() => {
+        const filteredRooms = filterRooms(rooms);
+        
+        if (filteredRooms.length === 0) {
+          return (
+            <Paper elevation={2} sx={{ p: 3, textAlign: 'center' }}>
+              <Typography variant="body1" color="textSecondary">
+                {rooms.length === 0 
+                  ? "No rooms available. Create a new room to start playing!"
+                  : "No rooms match your search. Try a different search term or create a new room."}
+              </Typography>
+            </Paper>
+          );
+        }
+        
+        return (
+          <Grid container spacing={3}>
+            {filteredRooms.map((room) => (
             <Grid item xs={12} sm={6} md={4} key={room.id}>
               <Card>
                 <CardContent>
@@ -560,9 +666,10 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
                 </CardActions>
               </Card>
             </Grid>
-          ))}
-        </Grid>
-      )}
+            ))}
+          </Grid>
+        );
+      })()}
       
       {/* Create Room Dialog */}
       <Dialog open={openCreateDialog} onClose={() => setOpenCreateDialog(false)}>
@@ -578,6 +685,21 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
             onChange={(e) => setRoomName(e.target.value)}
             sx={{ mb: 2, mt: 1 }}
           />
+          
+          <FormControlLabel
+            control={
+              <Checkbox 
+                checked={isRoomVisible}
+                onChange={(e) => setIsRoomVisible(e.target.checked)}
+              />
+            }
+            label="Show room in lobby list"
+          />
+          {!isRoomVisible && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', ml: 4 }}>
+              Secret rooms won't appear in the lobby, but can be joined with a direct link
+            </Typography>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenCreateDialog(false)}>Cancel</Button>
@@ -590,6 +712,14 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
           </Button>
         </DialogActions>
       </Dialog>
+      
+      {/* Snackbar for link copied notification */}
+      <Snackbar
+        open={copyLinkSnackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setCopyLinkSnackbarOpen(false)}
+        message="Room link copied to clipboard"
+      />
     </Box>
   );
 };

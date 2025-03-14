@@ -57,6 +57,7 @@ export interface GameRoom {
   status: 'waiting' | 'playing' | 'finished';
   createdAt: number;
   gameConfig?: GameConfig;
+  visible?: boolean;
 }
 
 export interface LobbyPlayer {

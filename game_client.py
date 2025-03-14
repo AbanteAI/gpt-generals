@@ -50,11 +50,18 @@ class GameClient:
         # Initialize a local copy of the game state
         self.game = None
 
+        # Lobby state
+        self.lobby_state = {"rooms": []}
+        self.current_room_id = None
+        self.player_name = f"Player_{id(self)}"
+        self.player_color = "#F44336"  # Default red
+
         # Callbacks for state updates and messages
         self.state_update_callbacks: List[Callable[[GameEngine], None]] = []
         self.move_result_callbacks: List[Callable[[Dict[str, Any]], None]] = []
         self.error_callbacks: List[Callable[[str], None]] = []
         self.chat_message_callbacks: List[Callable[[Dict[str, Any]], None]] = []
+        self.lobby_state_callbacks: List[Callable[[Dict[str, Any]], None]] = []
 
     def register_state_update_callback(self, callback: Callable[[GameEngine], None]) -> None:
         """
@@ -91,6 +98,15 @@ class GameClient:
             callback: Function that will be called with the chat message data
         """
         self.chat_message_callbacks.append(callback)
+
+    def register_lobby_state_callback(self, callback: Callable[[Dict[str, Any]], None]) -> None:
+        """
+        Register a callback to be called when lobby state is updated.
+
+        Args:
+            callback: Function that will be called with the lobby state data
+        """
+        self.lobby_state_callbacks.append(callback)
 
     async def connect(self) -> bool:
         """
@@ -131,7 +147,11 @@ class GameClient:
         for row in state_data["map_grid"]:
             map_grid_row = []
             for cell in row:
-                map_grid_row.append(TerrainType.WATER if cell == "~" else TerrainType.LAND)
+                # Handle both WATER/LAND strings and ~/. symbols
+                if cell == "~" or cell == "WATER":
+                    map_grid_row.append(TerrainType.WATER)
+                else:
+                    map_grid_row.append(TerrainType.LAND)
             map_grid.append(map_grid_row)
 
         # Create a game instance with the deserialized map
@@ -190,6 +210,21 @@ class GameClient:
                     except Exception as e:
                         logger.error(f"Error in state update callback: {e}")
 
+            elif message_type == "lobby_state":
+                # Update local lobby state
+                self.lobby_state = data
+
+                # Log the lobby state
+                rooms = data.get("rooms", [])
+                logger.info(f"Received lobby state with {len(rooms)} room(s)")
+
+                # Call lobby state callbacks
+                for callback in self.lobby_state_callbacks:
+                    try:
+                        callback(data)
+                    except Exception as e:
+                        logger.error(f"Error in lobby state callback: {e}")
+
             elif message_type == "move_result":
                 # Call move result callbacks
                 for callback in self.move_result_callbacks:
@@ -211,6 +246,56 @@ class GameClient:
                         callback(data)
                     except Exception as e:
                         logger.error(f"Error in chat message callback: {e}")
+
+            elif message_type == "room_created":
+                success = data.get("success", False)
+                room_id = data.get("room_id", "")
+                room_name = data.get("room_name", "")
+
+                if success:
+                    logger.info(f"Room created: {room_name} (ID: {room_id})")
+                    self.current_room_id = room_id
+                else:
+                    logger.error(f"Failed to create room: {data.get('message', 'Unknown error')}")
+
+            elif message_type == "room_joined":
+                success = data.get("success", False)
+                room_id = data.get("room_id", "")
+                room_name = data.get("room_name", "")
+
+                if success:
+                    logger.info(f"Joined room: {room_name} (ID: {room_id})")
+                    self.current_room_id = room_id
+                else:
+                    logger.error(f"Failed to join room: {data.get('message', 'Unknown error')}")
+
+            elif message_type == "room_left":
+                success = data.get("success", False)
+
+                if success:
+                    logger.info("Left room")
+                    self.current_room_id = None
+                else:
+                    logger.error(f"Failed to leave room: {data.get('message', 'Unknown error')}")
+
+            elif message_type == "game_started":
+                success = data.get("success", False)
+                room_id = data.get("room_id", "")
+
+                if success:
+                    logger.info(f"Game started in room {room_id}")
+                else:
+                    logger.error(f"Failed to start game: {data.get('message', 'Unknown error')}")
+
+            elif message_type == "player_info_updated":
+                success = data.get("success", False)
+
+                if success:
+                    logger.info("Player info updated")
+                else:
+                    logger.error(
+                        f"Failed to update player info: {data.get('message', 'Unknown error')}"
+                    )
 
             elif message_type == "error":
                 error_message = data.get("message", "Unknown error")
@@ -362,6 +447,107 @@ class GameClient:
         command = {"command": "reset"}
         return await self.send_command(command)
 
+    async def get_lobby_state(self) -> bool:
+        """
+        Request the current lobby state from the server.
+
+        Returns:
+            True if command was sent successfully, False otherwise
+        """
+        command = {"command": "get_lobby_state"}
+        return await self.send_command(command)
+
+    async def create_room(
+        self, room_name: str, player_name: str, player_color: str = "#F44336"
+    ) -> bool:
+        """
+        Create a new game room.
+
+        Args:
+            room_name: Name of the room to create
+            player_name: Name of the player creating the room
+            player_color: Color of the player (hex format)
+
+        Returns:
+            True if command was sent successfully, False otherwise
+        """
+        self.player_name = player_name
+        self.player_color = player_color
+
+        command = {
+            "command": "lobby_create_room",
+            "room_name": room_name,
+            "player_name": player_name,
+            "player_color": player_color,
+        }
+        return await self.send_command(command)
+
+    async def join_room(
+        self, room_id: str, player_name: str, player_color: str = "#2196F3"
+    ) -> bool:
+        """
+        Join an existing game room.
+
+        Args:
+            room_id: ID of the room to join
+            player_name: Name of the player joining the room
+            player_color: Color of the player (hex format)
+
+        Returns:
+            True if command was sent successfully, False otherwise
+        """
+        self.player_name = player_name
+        self.player_color = player_color
+
+        command = {
+            "command": "lobby_join_room",
+            "room_id": room_id,
+            "player_name": player_name,
+            "player_color": player_color,
+        }
+        return await self.send_command(command)
+
+    async def leave_room(self) -> bool:
+        """
+        Leave the current game room.
+
+        Returns:
+            True if command was sent successfully, False otherwise
+        """
+        command = {"command": "lobby_leave_room"}
+        return await self.send_command(command)
+
+    async def start_game(self) -> bool:
+        """
+        Start the game in the current room (host only).
+
+        Returns:
+            True if command was sent successfully, False otherwise
+        """
+        command = {"command": "lobby_start_game"}
+        return await self.send_command(command)
+
+    async def set_player_info(self, player_name: str, player_color: str) -> bool:
+        """
+        Update player information.
+
+        Args:
+            player_name: New player name
+            player_color: New player color (hex format)
+
+        Returns:
+            True if command was sent successfully, False otherwise
+        """
+        self.player_name = player_name
+        self.player_color = player_color
+
+        command = {
+            "command": "lobby_set_player_info",
+            "player_name": player_name,
+            "player_color": player_color,
+        }
+        return await self.send_command(command)
+
     def start(self) -> None:
         """Start the client in a separate thread."""
         if self.client_thread is not None and self.client_thread.is_alive():
@@ -484,15 +670,133 @@ def send_chat_message_sync(
         loop.close()
 
 
+# Synchronous wrapper functions for lobby commands
+def get_lobby_state_sync(client: GameClient) -> bool:
+    """
+    Synchronous wrapper for get_lobby_state.
+
+    Args:
+        client: GameClient instance
+
+    Returns:
+        True if command was sent successfully, False otherwise
+    """
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(client.get_lobby_state())
+    finally:
+        loop.close()
+
+
+def create_room_sync(
+    client: GameClient, room_name: str, player_name: str, player_color: str = "#F44336"
+) -> bool:
+    """
+    Synchronous wrapper for create_room.
+
+    Args:
+        client: GameClient instance
+        room_name: Name of the room to create
+        player_name: Name of the player creating the room
+        player_color: Color of the player (hex format)
+
+    Returns:
+        True if command was sent successfully, False otherwise
+    """
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(client.create_room(room_name, player_name, player_color))
+    finally:
+        loop.close()
+
+
+def join_room_sync(
+    client: GameClient, room_id: str, player_name: str, player_color: str = "#2196F3"
+) -> bool:
+    """
+    Synchronous wrapper for join_room.
+
+    Args:
+        client: GameClient instance
+        room_id: ID of the room to join
+        player_name: Name of the player joining the room
+        player_color: Color of the player (hex format)
+
+    Returns:
+        True if command was sent successfully, False otherwise
+    """
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(client.join_room(room_id, player_name, player_color))
+    finally:
+        loop.close()
+
+
+def leave_room_sync(client: GameClient) -> bool:
+    """
+    Synchronous wrapper for leave_room.
+
+    Args:
+        client: GameClient instance
+
+    Returns:
+        True if command was sent successfully, False otherwise
+    """
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(client.leave_room())
+    finally:
+        loop.close()
+
+
+def start_game_sync(client: GameClient) -> bool:
+    """
+    Synchronous wrapper for start_game.
+
+    Args:
+        client: GameClient instance
+
+    Returns:
+        True if command was sent successfully, False otherwise
+    """
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(client.start_game())
+    finally:
+        loop.close()
+
+
+def set_player_info_sync(client: GameClient, player_name: str, player_color: str) -> bool:
+    """
+    Synchronous wrapper for set_player_info.
+
+    Args:
+        client: GameClient instance
+        player_name: New player name
+        player_color: New player color (hex format)
+
+    Returns:
+        True if command was sent successfully, False otherwise
+    """
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(client.set_player_info(player_name, player_color))
+    finally:
+        loop.close()
+
+
 def main():
     """Run a simple test client."""
     import argparse
+    import random
     import time
 
     parser = argparse.ArgumentParser(description="GPT Generals Game Client")
     parser.add_argument("--host", default="localhost", help="Server host address")
     parser.add_argument("--port", type=int, default=8765, help="Server port")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
+    parser.add_argument("--player-name", default="", help="Player name")
+    parser.add_argument("--no-lobby", action="store_true", help="Skip lobby and join game directly")
 
     args = parser.parse_args()
 
@@ -503,7 +807,10 @@ def main():
     # Create and start the client
     client = GameClient(host=args.host, port=args.port)
 
-    # Register callbacks
+    # Set a default player name if not provided
+    player_name = args.player_name if args.player_name else f"Player_{random.randint(1000, 9999)}"
+
+    # Register callbacks for game state
     def on_state_update(game):
         print("\nGame state updated:")
         print(game.render_map())
@@ -529,9 +836,27 @@ def main():
     def on_error(error):
         print(f"Error: {error}")
 
+    def on_lobby_state(state):
+        rooms = state.get("rooms", [])
+        print("\nLobby state updated:")
+        print(f"Available rooms: {len(rooms)}")
+
+        for i, room in enumerate(rooms):
+            print(f"\nRoom {i + 1}: {room.get('name', 'Unnamed')} (ID: {room.get('id', 'N/A')})")
+            print(f"Host: {room.get('hostName', 'Unknown')}")
+            print(f"Status: {room.get('status', 'Unknown')}")
+
+            players = room.get("players", [])
+            print(f"Players ({len(players)}):")
+            for player in players:
+                host_tag = " (Host)" if player.get("isHost", False) else ""
+                print(f"  - {player.get('name', 'Unknown')}{host_tag}")
+
+    # Register all callbacks
     client.register_state_update_callback(on_state_update)
     client.register_move_result_callback(on_move_result)
     client.register_error_callback(on_error)
+    client.register_lobby_state_callback(on_lobby_state)
 
     # Start the client
     client.start()
@@ -541,39 +866,193 @@ def main():
         print("Connecting to server...")
         time.sleep(2)
 
-        # Request initial state
-        get_state_sync(client)
+        # Determine if we should skip the lobby
+        if args.no_lobby:
+            print("Skipping lobby and joining game directly...")
+            get_state_sync(client)
+            game_running = True
+        else:
+            # Enter lobby mode
+            print(f"Entering lobby as {player_name}...")
+            get_lobby_state_sync(client)
 
-        # Simple interactive loop
-        while client.running and client.connected:
-            command = (
-                input("\nEnter command (move <unit> <direction>, state, reset, quit): ")
-                .lower()
-                .strip()
-            )
+            # Set the player name
+            client.player_name = player_name
 
-            if command == "quit":
-                break
-            elif command == "state":
-                get_state_sync(client)
-            elif command == "reset":
-                reset_game_sync(client)
-            elif command.startswith("move "):
-                parts = command.split()
-                if len(parts) == 3:
-                    _, unit, direction = parts
-                    valid_directions = {"up", "down", "left", "right"}
-                    if direction in valid_directions:
-                        move_unit_sync(client, unit.upper(), direction)
+            # Initial lobby state
+            room_id = None
+            is_in_room = False
+            is_host = False
+            game_running = False
+
+            # Show lobby menu
+            def show_lobby_menu():
+                print("\nLobby Menu:")
+                print("1. Refresh lobby")
+                print("2. Create new room")
+                print("3. Join room")
+                print("4. Leave room")
+                print("5. Start game (host only)")
+                print("6. View your status")
+                print("7. Exit")
+
+                if is_in_room and not game_running:
+                    # Show additional options for in-room actions
+                    if is_host:
+                        print("\nYou are the host of the current room.")
                     else:
-                        print(f"Invalid direction. Use one of: {', '.join(valid_directions)}")
-                else:
-                    print("Invalid move command. Format: move <unit> <direction>")
-            else:
-                print("Unknown command")
+                        print("\nYou are in a room. Wait for the host to start the game.")
 
-            # Short delay to allow for response
-            time.sleep(0.5)
+            # Process lobby commands
+            while client.running and client.connected and not game_running:
+                show_lobby_menu()
+                choice = input("\nEnter your choice (1-7): ").strip()
+
+                if choice == "1":
+                    print("Refreshing lobby state...")
+                    get_lobby_state_sync(client)
+
+                elif choice == "2":
+                    if not is_in_room:
+                        room_name = input("Enter room name: ").strip() or f"{player_name}'s Room"
+                        print(f"Creating room '{room_name}'...")
+                        if create_room_sync(client, room_name, player_name):
+                            is_in_room = True
+                            is_host = True
+                            print(f"Room '{room_name}' created.")
+                    else:
+                        print("You're already in a room. Leave it first to create a new one.")
+
+                elif choice == "3":
+                    if not is_in_room:
+                        if not client.lobby_state or not client.lobby_state.get("rooms"):
+                            print("No rooms available. Try refreshing the lobby.")
+                        else:
+                            rooms = client.lobby_state.get("rooms", [])
+                            print("\nAvailable rooms:")
+
+                            for i, room in enumerate(rooms):
+                                if room.get("status") == "waiting":
+                                    print(
+                                        f"{i + 1}. {room.get('name')} - "
+                                        f"Host: {room.get('hostName')}"
+                                    )
+
+                            try:
+                                room_index = (
+                                    int(input("\nEnter room number to join (0 to cancel): ")) - 1
+                                )
+                                if room_index >= 0 and room_index < len(rooms):
+                                    room = rooms[room_index]
+                                    if room.get("status") == "waiting":
+                                        room_id = room.get("id")
+                                        print(f"Joining room '{room.get('name')}'...")
+                                        if join_room_sync(client, room_id, player_name):
+                                            is_in_room = True
+                                            is_host = False
+                                            print(f"Joined room '{room.get('name')}'.")
+                                    else:
+                                        print("Cannot join this room: game already in progress.")
+                            except (ValueError, IndexError):
+                                print("Invalid selection.")
+                    else:
+                        print("You're already in a room. Leave it first to join another one.")
+
+                elif choice == "4":
+                    if is_in_room:
+                        print("Leaving room...")
+                        if leave_room_sync(client):
+                            is_in_room = False
+                            is_host = False
+                            print("Left room.")
+                    else:
+                        print("You're not in a room.")
+
+                elif choice == "5":
+                    if is_in_room and is_host:
+                        print("Starting game...")
+                        if start_game_sync(client):
+                            game_running = True
+                            print("Game started!")
+                    elif is_in_room:
+                        print("Only the host can start the game.")
+                    else:
+                        print("You're not in a room.")
+
+                elif choice == "6":
+                    print("\nYour status:")
+                    print(f"Name: {player_name}")
+                    if is_in_room:
+                        print("In room: Yes")
+                        print(f"Role: {'Host' if is_host else 'Player'}")
+
+                        # Find the current room in the lobby state
+                        if client.lobby_state and client.lobby_state.get("rooms"):
+                            current_room = next(
+                                (
+                                    r
+                                    for r in client.lobby_state.get("rooms", [])
+                                    if r.get("id") == client.current_room_id
+                                ),
+                                None,
+                            )
+                            if current_room:
+                                print(f"Room name: {current_room.get('name')}")
+                                print(f"Room status: {current_room.get('status')}")
+
+                                players = current_room.get("players", [])
+                                print(f"Players in room: {len(players)}")
+                                for p in players:
+                                    host_tag = " (Host)" if p.get("isHost", False) else ""
+                                    print(f"  - {p.get('name')}{host_tag}")
+                    else:
+                        print("In room: No")
+
+                elif choice == "7":
+                    print("Exiting...")
+                    break
+
+                else:
+                    print("Invalid choice. Please try again.")
+
+                # Short delay to allow for responses from server
+                time.sleep(0.5)
+
+        # Game loop - only enter if we're now in a game
+        if game_running and client.running and client.connected:
+            print("\nEntering game mode...")
+            get_state_sync(client)
+
+            # Simple interactive game loop
+            while client.running and client.connected:
+                command = (
+                    input("\nEnter command (move <unit> <direction>, state, reset, quit): ")
+                    .lower()
+                    .strip()
+                )
+
+                if command == "quit":
+                    break
+                elif command == "state":
+                    get_state_sync(client)
+                elif command == "reset":
+                    reset_game_sync(client)
+                elif command.startswith("move "):
+                    parts = command.split()
+                    if len(parts) == 3:
+                        _, unit, direction = parts
+                        valid_directions = {"up", "down", "left", "right"}
+                        if direction in valid_directions:
+                            move_unit_sync(client, unit.upper(), direction)
+                        else:
+                            print(f"Invalid direction. Use one of: {', '.join(valid_directions)}")
+                    else:
+                        print("Invalid move command. Format: move <unit> <direction>")
+                else:
+                    print("Unknown command")
+
+                # Short delay to allow for response
+                time.sleep(0.5)
 
     except KeyboardInterrupt:
         print("\nExiting...")
