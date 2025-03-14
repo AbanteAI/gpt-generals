@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, IconButton, Paper, Grid, Tooltip } from '@mui/material';
+import { Box, IconButton, Paper, Grid, Tooltip, Button } from '@mui/material';
 import { GameState, TerrainType, Position } from '../models';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
@@ -47,6 +47,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState: initialGameStat
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
   const [selectedTerrain, setSelectedTerrain] = useState<TerrainType>(TerrainType.LAND);
   const [viewMode, setViewMode] = useState<'flat' | 'isometric'>('flat');
+  const [hasAdminChanges, setHasAdminChanges] = useState<boolean>(false);
   const { isAdmin } = useAdmin();
   
   // Calculate grid dimensions
@@ -55,11 +56,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState: initialGameStat
   
   // Update local game state when props change, but preserve admin changes
   useEffect(() => {
-    // Only update if we're not in editor mode to preserve admin changes
-    if (!editorMode) {
+    // Only update if there are no admin changes to preserve
+    if (!hasAdminChanges) {
       setGameState(initialGameState);
     } else {
-      // If in editor mode, merge changes with the incoming state without losing local edits
+      // If admin changes exist, merge changes with the incoming state without losing local edits
       setGameState(prevState => {
         // Create a new state object with initialGameState as the base
         return {
@@ -71,7 +72,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState: initialGameStat
         };
       });
     }
-  }, [initialGameState, editorMode]);
+  }, [initialGameState, hasAdminChanges]);
 
   const isUnitAtPosition = (x: number, y: number): UnitAtPosition | null => {
     for (const unitKey in units) {
@@ -109,10 +110,17 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState: initialGameStat
   };
 
   const handleEditorAction = (x: number, y: number) => {
-    // Don't process clicks if the position is invalid (used for signaling)
-    if (x < 0 || y < 0) return;
+    // Special signal for resetting editor mode
+    if (x === -2 && y === -2) {
+      // Just reset editor mode, don't reset admin changes
+      setEditorMode(null);
+      return;
+    }
     
-    // Create a position object
+    // Signal for changing editor mode without performing an action
+    if (x === -1 && y === -1) return;
+    
+    // Regular click - create a position object
     const position: Position = { x, y };
     
     // Handle different editor modes
@@ -158,6 +166,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState: initialGameStat
       
       // Update game state
       setGameState(newGameState);
+      
+      // Mark that we have admin changes
+      setHasAdminChanges(true);
     } catch (error) {
       console.error('Error placing unit:', error);
     }
@@ -185,6 +196,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState: initialGameStat
         
         // Update game state
         setGameState(newGameState);
+        
+        // Mark that we have admin changes
+        setHasAdminChanges(true);
       }
     } catch (error) {
       console.error('Error placing coin:', error);
@@ -219,6 +233,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState: initialGameStat
         
         // Update game state
         setGameState(newGameState);
+        
+        // Mark that we have admin changes
+        setHasAdminChanges(true);
       }
     } catch (error) {
       console.error('Error changing terrain:', error);
@@ -246,6 +263,15 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState: initialGameStat
   // The MapEditorPanel and GameBoard communicate through callback props
   // No need for a separate handler function as the callbacks directly update the state
   
+  // This function will explicitly reset all admin changes and revert to the initial game state
+  const resetAdminChanges = () => {
+    if (hasAdminChanges) {
+      setGameState(initialGameState);
+      setHasAdminChanges(false);
+      setEditorMode(null);
+    }
+  };
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, position: 'relative' }}>
       <Box
@@ -453,7 +479,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState: initialGameStat
       {/* Map Editor Panel */}
       <MapEditorPanel 
         onPlaceUnit={(position, playerId) => {
-          // Special position values are used for signaling
+          // Use a common handler for editor actions
           if (position.x === -2 && position.y === -2) {
             // Reset editing mode
             setEditorMode(null);
@@ -471,7 +497,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState: initialGameStat
           placeUnit(position, playerId);
         }}
         onPlaceCoin={(position) => {
-          // Special position values are used for signaling
+          // Use a common handler for editor actions
           if (position.x === -2 && position.y === -2) {
             // Reset editing mode
             setEditorMode(null);
@@ -488,7 +514,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState: initialGameStat
           placeCoin(position);
         }}
         onChangeTerrain={(position, terrain) => {
-          // Special position values are used for signaling
+          // Use a common handler for editor actions
           if (position.x === -2 && position.y === -2) {
             // Reset editing mode
             setEditorMode(null);
@@ -507,6 +533,29 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState: initialGameStat
         }}
         playerIds={Object.keys(players)}
       />
+      
+      {/* Reset changes button - only show if admin changes exist */}
+      {hasAdminChanges && (
+        <Tooltip title="Reset all admin changes">
+          <Button
+            data-testid="reset-changes-button"
+            variant="outlined"
+            color="warning"
+            onClick={resetAdminChanges}
+            sx={{ 
+              position: 'fixed', 
+              bottom: 80, 
+              right: 80, 
+              backgroundColor: 'white',
+              '&:hover': {
+                backgroundColor: '#f5f5f5'
+              }
+            }}
+          >
+            Reset Changes
+          </Button>
+        </Tooltip>
+      )}
 
       {/* View mode toggle button - positioned to not overlap with editor button */}
       <Tooltip title={`Switch to ${viewMode === 'flat' ? 'isometric' : 'flat'} view`}>
@@ -516,7 +565,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState: initialGameStat
           sx={{ 
             position: 'fixed', 
             bottom: 16, 
-            right: 80, // Moved to the left of the editor button
+            right: 140, // Moved further left to avoid overlap with editor and reset buttons
             backgroundColor: 'white',
             boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
             '&:hover': {

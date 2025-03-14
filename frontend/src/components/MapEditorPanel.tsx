@@ -124,6 +124,7 @@ export const MapEditorPanel: React.FC<MapEditorPanelProps> = ({
     <>
       {/* Floating toggle button */}
       <Fab 
+        data-testid="map-editor-button"
         color="primary" 
         sx={{ position: 'fixed', bottom: 16, right: 16 }}
         onClick={handleActivateEditing}
@@ -164,17 +165,17 @@ export const MapEditorPanel: React.FC<MapEditorPanelProps> = ({
             fullWidth
             sx={{ mb: 2 }}
           >
-            <ToggleButton value="unit">
+            <ToggleButton value="unit" data-testid="unit-mode-button">
               <Tooltip title="Place Units">
                 <PeopleIcon />
               </Tooltip>
             </ToggleButton>
-            <ToggleButton value="coin">
+            <ToggleButton value="coin" data-testid="coin-mode-button">
               <Tooltip title="Place Coins">
                 <CoinsIcon />
               </Tooltip>
             </ToggleButton>
-            <ToggleButton value="terrain">
+            <ToggleButton value="terrain" data-testid="terrain-mode-button">
               <Tooltip title="Change Terrain">
                 <TerraformIcon />
               </Tooltip>
