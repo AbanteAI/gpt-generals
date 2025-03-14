@@ -302,14 +302,14 @@ def get_unit_move_decision(game: GameEngine, unit_name: str) -> Optional[MoveDec
         return None
 
 
-def run_simulation(num_turns: int = 10, use_custom_map: bool = False, use_llm: bool = False):
+def run_simulation(num_turns: int = 10, use_custom_map: bool = False, use_llm: bool = True):
     """
     Run a simulation of the game with unit movements for a specified number of turns.
 
     Args:
         num_turns: Number of turns to simulate (default 10)
         use_custom_map: Whether to use a custom generated map (default False)
-        use_llm: Whether to use LLM for unit movement decisions (default False)
+        use_llm: Whether to use LLM for unit movement decisions (default True)
     """
     # Create a game instance, optionally with a custom map
     if use_custom_map:
@@ -375,7 +375,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run a GPT Generals simulation.")
     parser.add_argument("--turns", type=int, default=10, help="Number of turns to simulate")
     parser.add_argument("--custom-map", action="store_true", help="Use a custom map")
-    parser.add_argument("--llm", action="store_true", help="Use LLM for unit movement decisions")
+    parser.add_argument("--random", action="store_true", help="Use random movement instead of LLM (default: False)")
 
     args = parser.parse_args()
 
@@ -383,5 +383,5 @@ if __name__ == "__main__":
     run_simulation(
         num_turns=args.turns,
         use_custom_map=args.custom_map,
-        use_llm=args.llm,
+        use_llm=not args.random,
     )
