@@ -147,8 +147,9 @@ class GameEngine:
 
     def _place_units(self):
         """Place initial units for each player on random land positions."""
-        # Place one unit for each player
-        for player_id in self.players:
+        # Place one unit for each player in sorted order to ensure consistent unit assignment
+        # This ensures player "p0" gets unit A, player "p1" gets unit B, etc.
+        for player_id in sorted(self.players.keys()):
             self.add_unit(player_id)
 
     def _place_coins(self, num_coins: int):
