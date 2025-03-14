@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { GameBoard } from '../components/GameBoard';
-import { TerrainType } from '../models';
+import { TerrainType, Position } from '../models';
 import * as ApiModule from '../api';
 import { AdminContext } from '../context/AdminContext';
 

@@ -73,6 +73,19 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState: initialGameStat
       });
     }
   }, [initialGameState, hasAdminChanges]);
+  
+  // When editorMode changes, update selectedUnit if it became null
+  useEffect(() => {
+    // If we're no longer in editor mode, reset the selected unit
+    // This helps ensure movement controls work after exiting editor mode
+    if (editorMode === null && !selectedUnit) {
+      // Find the first unit to select (if any exist)
+      const unitKeys = Object.keys(units);
+      if (unitKeys.length > 0) {
+        setSelectedUnit(unitKeys[0]);
+      }
+    }
+  }, [editorMode, selectedUnit, units]);
 
   const isUnitAtPosition = (x: number, y: number): UnitAtPosition | null => {
     for (const unitKey in units) {
@@ -244,7 +257,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState: initialGameStat
 
   const handleMoveUnit = async (direction: 'up' | 'down' | 'left' | 'right') => {
     if (selectedUnit) {
-      await moveUnit(selectedUnit, direction);
+      console.log(`Moving unit ${selectedUnit} ${direction}`);
+      try {
+        await moveUnit(selectedUnit, direction);
+      } catch (error) {
+        console.error('Error moving unit:', error);
+      }
+    } else {
+      console.log('No unit selected for movement');
     }
   };
 
@@ -545,7 +565,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState: initialGameStat
             sx={{ 
               position: 'fixed', 
               bottom: 80, 
-              right: 80, 
+              right: 16, 
               backgroundColor: 'white',
               '&:hover': {
                 backgroundColor: '#f5f5f5'
@@ -565,7 +585,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState: initialGameStat
           sx={{ 
             position: 'fixed', 
             bottom: 16, 
-            right: 140, // Moved further left to avoid overlap with editor and reset buttons
+            right: 80, // Position relative to admin button
             backgroundColor: 'white',
             boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
             '&:hover': {
