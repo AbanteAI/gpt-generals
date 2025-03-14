@@ -115,34 +115,43 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState: initialGameStat
 
   const placeUnit = async (position: Position, playerId: string) => {
     try {
-      // In a real implementation, we would send this to the server
       console.log(`Placing unit at (${position.x}, ${position.y}) for player ${playerId}`);
       
       // Send a chat message to indicate the action
       await gameClient.sendChatMessage('Admin', `Placed unit at (${position.x}, ${position.y}) for player ${playerId}`, 'system');
       
-      // Simulate what the server would do by updating the local game state
-      // Generate a unique unit name based on the next available letter
-      const unitNames = Object.keys(units);
-      const nextUnitLetter = String.fromCharCode(
-        65 + unitNames.length % 26 + (unitNames.length >= 26 ? 26 : 0)
-      );
+      // Send the admin command to the server
+      const success = await gameClient.placeUnit(position, playerId);
       
-      // Create a new game state with the added unit
-      const newGameState = {
-        ...gameState,
-        units: {
-          ...gameState.units,
-          [nextUnitLetter]: {
-            name: nextUnitLetter,
-            position: position,
-            player_id: playerId
+      if (success) {
+        // The server will broadcast the updated game state to all clients
+        console.log('Unit placement sent to server successfully');
+      } else {
+        console.error('Server failed to place unit');
+        
+        // Fallback: update local state if server operation failed
+        // Generate a unique unit name based on the next available letter
+        const unitNames = Object.keys(units);
+        const nextUnitLetter = String.fromCharCode(
+          65 + unitNames.length % 26 + (unitNames.length >= 26 ? 26 : 0)
+        );
+        
+        // Create a new game state with the added unit
+        const newGameState = {
+          ...gameState,
+          units: {
+            ...gameState.units,
+            [nextUnitLetter]: {
+              name: nextUnitLetter,
+              position: position,
+              player_id: playerId
+            }
           }
-        }
-      };
-      
-      // Update game state
-      setGameState(newGameState);
+        };
+        
+        // Update local game state as fallback
+        setGameState(newGameState);
+      }
     } catch (error) {
       console.error('Error placing unit:', error);
     }
@@ -150,26 +159,36 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState: initialGameStat
 
   const placeCoin = async (position: Position) => {
     try {
-      // In a real implementation, we would send this to the server
       console.log(`Placing coin at (${position.x}, ${position.y})`);
       
       // Send a chat message to indicate the action
       await gameClient.sendChatMessage('Admin', `Placed coin at (${position.x}, ${position.y})`, 'system');
       
-      // Check if there's already a coin at this position
-      const coinExists = gameState.coinPositions.some(
-        coin => coin.x === position.x && coin.y === position.y
-      );
+      // Send the admin command to the server
+      const success = await gameClient.placeCoin(position);
       
-      if (!coinExists) {
-        // Create a new game state with the added coin
-        const newGameState = {
-          ...gameState,
-          coinPositions: [...gameState.coinPositions, position]
-        };
+      if (success) {
+        // The server will broadcast the updated game state to all clients
+        console.log('Coin placement sent to server successfully');
+      } else {
+        console.error('Server failed to place coin');
         
-        // Update game state
-        setGameState(newGameState);
+        // Fallback: update local state if server operation failed
+        // Check if there's already a coin at this position
+        const coinExists = gameState.coinPositions.some(
+          coin => coin.x === position.x && coin.y === position.y
+        );
+        
+        if (!coinExists) {
+          // Create a new game state with the added coin
+          const newGameState = {
+            ...gameState,
+            coinPositions: [...gameState.coinPositions, position]
+          };
+          
+          // Update local game state as fallback
+          setGameState(newGameState);
+        }
       }
     } catch (error) {
       console.error('Error placing coin:', error);
@@ -178,32 +197,40 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState: initialGameStat
 
   const changeTerrain = async (position: Position, terrain: TerrainType) => {
     try {
-      // For better debugging
       console.log(`Changing terrain at position (${position.x}, ${position.y}) to ${terrain}`);
       
       // Send a chat message to indicate the action
       await gameClient.sendChatMessage('Admin', `Changed terrain at (${position.x}, ${position.y}) to ${terrain}`, 'system');
       
-      // Create a copy of the map grid
-      const newMapGrid = gameState.mapGrid.map(row => [...row]);
+      // Send the admin command to the server
+      const success = await gameClient.changeTerrain(position, terrain);
       
-      // Update the terrain directly without further coordinate conversion
-      // When we click on a cell, we get coordinates in the original grid coordinate system
-      // where (0,0) is the top-left. So we can use position.y directly.
-      if (position.x >= 0 && position.x < newMapGrid[0].length && 
-          position.y >= 0 && position.y < newMapGrid.length) {
+      if (success) {
+        // The server will broadcast the updated game state to all clients
+        console.log('Terrain change sent to server successfully');
+      } else {
+        console.error('Server failed to change terrain');
         
-        // Use position.y directly without conversion
-        newMapGrid[position.y][position.x] = terrain;
+        // Fallback: update local state if server operation failed
+        // Create a copy of the map grid
+        const newMapGrid = gameState.mapGrid.map(row => [...row]);
         
-        // Create a new game state with the updated map grid
-        const newGameState = {
-          ...gameState,
-          mapGrid: newMapGrid
-        };
-        
-        // Update game state
-        setGameState(newGameState);
+        // Update the terrain directly without further coordinate conversion
+        if (position.x >= 0 && position.x < newMapGrid[0].length && 
+            position.y >= 0 && position.y < newMapGrid.length) {
+          
+          // Use position.y directly without conversion
+          newMapGrid[position.y][position.x] = terrain;
+          
+          // Create a new game state with the updated map grid
+          const newGameState = {
+            ...gameState,
+            mapGrid: newMapGrid
+          };
+          
+          // Update local game state as fallback
+          setGameState(newGameState);
+        }
       }
     } catch (error) {
       console.error('Error changing terrain:', error);

@@ -468,6 +468,80 @@ export class GameClient {
     });
   }
 
+  // Admin: Place a unit (admin only)
+  public placeUnit(position: Position, playerId: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        console.error('Cannot place unit: WebSocket is not connected');
+        resolve(false);
+        return;
+      }
+      
+      const message = {
+        command: 'admin_place_unit',
+        position: [position.x, position.y],
+        player_id: playerId
+      };
+      
+      try {
+        this.ws.send(JSON.stringify(message));
+        resolve(true);
+      } catch (error) {
+        console.error('Error placing unit:', error);
+        resolve(false);
+      }
+    });
+  }
+
+  // Admin: Place a coin (admin only)
+  public placeCoin(position: Position): Promise<boolean> {
+    return new Promise((resolve) => {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        console.error('Cannot place coin: WebSocket is not connected');
+        resolve(false);
+        return;
+      }
+      
+      const message = {
+        command: 'admin_place_coin',
+        position: [position.x, position.y]
+      };
+      
+      try {
+        this.ws.send(JSON.stringify(message));
+        resolve(true);
+      } catch (error) {
+        console.error('Error placing coin:', error);
+        resolve(false);
+      }
+    });
+  }
+
+  // Admin: Change terrain (admin only)
+  public changeTerrain(position: Position, terrain: TerrainType): Promise<boolean> {
+    return new Promise((resolve) => {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        console.error('Cannot change terrain: WebSocket is not connected');
+        resolve(false);
+        return;
+      }
+      
+      const message = {
+        command: 'admin_change_terrain',
+        position: [position.x, position.y],
+        terrain: terrain // Will be converted to string enum name
+      };
+      
+      try {
+        this.ws.send(JSON.stringify(message));
+        resolve(true);
+      } catch (error) {
+        console.error('Error changing terrain:', error);
+        resolve(false);
+      }
+    });
+  }
+
   // Handle WebSocket open event
   private handleOpen(): void {
     console.log('WebSocket connection established');
