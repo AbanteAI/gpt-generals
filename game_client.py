@@ -384,7 +384,11 @@ class GameClient:
             return False
 
     async def move_unit(
-        self, unit_name: str, direction: str, player_id: Optional[str] = None
+        self,
+        unit_name: str,
+        direction: str,
+        player_id: Optional[str] = None,
+        client_id: Optional[str] = None,
     ) -> bool:
         """
         Send a move command to the server.
@@ -393,6 +397,7 @@ class GameClient:
             unit_name: Name of the unit to move
             direction: Direction to move ('up', 'down', 'left', 'right')
             player_id: Optional player ID. If not provided, the server will verify ownership.
+            client_id: Optional client ID. If provided, the server will use it to determine player ownership.
 
         Returns:
             True if command was sent successfully, False otherwise
@@ -402,6 +407,10 @@ class GameClient:
         # Add player_id to the command if provided
         if player_id is not None:
             command["player_id"] = player_id
+
+        # Add client_id to the command if provided
+        if client_id is not None:
+            command["client_id"] = client_id
 
         return await self.send_command(command)
 

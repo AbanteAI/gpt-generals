@@ -12,6 +12,7 @@ class Player:
     id: str
     name: str
     color: str
+    client_id: Optional[str] = None
 
 
 @dataclass
@@ -82,6 +83,9 @@ class GameEngine:
         self.coin_positions: List[Tuple[int, int]] = []
         self.next_unit_id = 0
 
+        # Mapping of client_ids to player_ids
+        self.client_to_player: Dict[str, str] = {}
+
         # Add two default players
         self.add_player("Player 1")
         self.add_player("Player 2")
@@ -95,12 +99,13 @@ class GameEngine:
         # Save initial state
         self._save_state()
 
-    def add_player(self, player_name: str) -> str:
+    def add_player(self, player_name: str, client_id: Optional[str] = None) -> str:
         """
         Add a new player to the game.
 
         Args:
             player_name: Name of the player
+            client_id: Optional client ID to associate with this player
 
         Returns:
             The ID of the newly created player
@@ -110,10 +115,51 @@ class GameEngine:
 
         # Create the player with a unique color
         self.players[player_id] = Player(
-            id=player_id, name=player_name, color=self.DEFAULT_COLORS[color_index]
+            id=player_id,
+            name=player_name,
+            color=self.DEFAULT_COLORS[color_index],
+            client_id=client_id,
         )
 
+        # Associate client with player if provided
+        if client_id is not None:
+            self.client_to_player[client_id] = player_id
+
         return player_id
+
+    def get_player_for_client(self, client_id: str) -> Optional[str]:
+        """
+        Get the player ID associated with a client.
+
+        Args:
+            client_id: The client ID to look up
+
+        Returns:
+            The player ID if found, None otherwise
+        """
+        return self.client_to_player.get(client_id)
+
+    def associate_client_with_player(self, client_id: str, player_id: str) -> bool:
+        """
+        Associate a client with an existing player.
+
+        Args:
+            client_id: ID of the client to associate
+            player_id: ID of the player to associate with
+
+        Returns:
+            True if association was successful, False otherwise
+        """
+        if player_id not in self.players:
+            return False
+
+        # Update the client_to_player mapping
+        self.client_to_player[client_id] = player_id
+
+        # Update the player's client_id
+        self.players[player_id].client_id = client_id
+
+        return True
 
     def add_unit(self, player_id: str) -> str:
         """
@@ -175,7 +221,13 @@ class GameEngine:
         )
         self.history.append(state)
 
-    def move_unit(self, unit_name: str, direction: str, player_id: Optional[str] = None) -> bool:
+    def move_unit(
+        self,
+        unit_name: str,
+        direction: str,
+        player_id: Optional[str] = None,
+        client_id: Optional[str] = None,
+    ) -> bool:
         """
         Move a unit in the specified direction.
 
@@ -183,6 +235,7 @@ class GameEngine:
             unit_name: Name of the unit to move
             direction: Direction to move ('up', 'down', 'left', 'right')
             player_id: ID of the player attempting to move the unit (if None, any player can move)
+            client_id: ID of the client attempting to move the unit (used to determine player_id if not provided)
 
         Returns:
             True if the move was successful, False otherwise
@@ -192,8 +245,13 @@ class GameEngine:
 
         unit = self.units[unit_name]
 
+        # Determine the player ID based on input
+        effective_player_id = player_id
+        if effective_player_id is None and client_id is not None:
+            effective_player_id = self.get_player_for_client(client_id)
+
         # Check if the player owns this unit
-        if player_id is not None and unit.player_id != player_id:
+        if effective_player_id is not None and unit.player_id != effective_player_id:
             return False
 
         x, y = unit.position

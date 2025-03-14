@@ -12,7 +12,7 @@ class PlayerController:
     Controller class for human player input in the GPT Generals game.
     """
 
-    def __init__(self, game_engine, manual_mode=False):
+    def __init__(self, game_engine, manual_mode=False, player_id=None, client_id=None):
         """
         Initialize the player controller.
 
@@ -20,10 +20,14 @@ class PlayerController:
             game_engine: GameEngine instance to control
             manual_mode: If True, use manual control mode with unit/direction commands
                         If False, use natural language input mode (default)
+            player_id: ID of the player this controller controls (optional)
+            client_id: ID of the client associated with this controller (optional)
         """
         self.game_engine = game_engine
         self.manual_mode = manual_mode
         self.chat_history = ChatHistory()
+        self.player_id = player_id
+        self.client_id = client_id
         self.direction_map = {
             "w": "up",
             "a": "left",
@@ -34,6 +38,28 @@ class PlayerController:
             "j": "down",  # vim-style down
             "l": "right",  # vim-style right
         }
+
+    def set_player_id(self, player_id: str) -> None:
+        """
+        Set the player ID for this controller.
+
+        Args:
+            player_id: ID of the player this controller controls
+        """
+        self.player_id = player_id
+
+    def set_client_id(self, client_id: str) -> None:
+        """
+        Set the client ID for this controller and associate it with the player.
+
+        Args:
+            client_id: ID of the client associated with this controller
+        """
+        self.client_id = client_id
+
+        # Associate the client with the player if we have both IDs
+        if self.player_id and self.client_id:
+            self.game_engine.associate_client_with_player(self.client_id, self.player_id)
 
     def process_input(self, player_input: str) -> bool:
         """
@@ -85,22 +111,20 @@ class PlayerController:
         # Translate wasd to game directions
         direction = self.direction_map[direction_key]
 
-        # Get the player's ID from the game engine based on the unit name
-        unit = self.game_engine.units.get(unit_name)
-        if unit:
-            # Check if the unit exists in the game
-            player_id = unit.player_id
-        else:
-            player_id = None
-
-        # Try to move the unit
-        success = self.game_engine.move_unit(unit_name, direction, player_id)
+        # Try to move the unit with the associated player/client ID
+        success = self.game_engine.move_unit(
+            unit_name, direction, player_id=self.player_id, client_id=self.client_id
+        )
 
         if success:
             # Add a movement message to chat history
             self.chat_history.add_move_message(f"{unit_name} moved {direction}")
         else:
-            print(f"Move failed. Unit {unit_name} cannot move {direction}.")
+            unit = self.game_engine.units.get(unit_name)
+            if unit and self.player_id and unit.player_id != self.player_id:
+                print(f"Move failed. Unit {unit_name} belongs to another player.")
+            else:
+                print(f"Move failed. Unit {unit_name} cannot move {direction}.")
 
         return success
 
@@ -147,3 +171,19 @@ class PlayerController:
             Formatted chat history as a string
         """
         return self.chat_history.format_chat_history(max_messages)
+
+    def get_player_units(self) -> list:
+        """
+        Get a list of units owned by this player.
+
+        Returns:
+            A list of unit names owned by the player
+        """
+        if not self.player_id:
+            return []
+
+        return [
+            name
+            for name, unit in self.game_engine.units.items()
+            if unit.player_id == self.player_id
+        ]
