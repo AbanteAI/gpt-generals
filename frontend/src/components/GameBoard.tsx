@@ -140,7 +140,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
           transformOrigin: 'center center',
           transition: 'transform 0.5s ease',
           perspective: '1000px',
-          marginTop: viewMode === 'isometric' ? '60px' : '0',
+          marginTop: viewMode === 'isometric' ? '70px' : '0',
         }}
       >
         {reversedMapGrid.map((row, reversedY) => {
@@ -241,11 +241,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                         zIndex: 5,
                         overflow: 'visible',
                         
-                        // Robot body - main body piece - make it more upright
+                        // Robot body - perfectly vertical, counteracting isometric transform 
                         '&::before': {
                           content: '""',
                           position: 'absolute',
-                          width: '20px',
+                          width: '18px',
                           height: '24px',
                           borderRadius: '4px',
                           backgroundColor: unitAtPos.color,
@@ -254,9 +254,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                             ? `0 0 12px 3px ${unitAtPos.color}` 
                             : '0 3px 6px rgba(0,0,0,0.4)',
                           zIndex: 1,
-                          top: '1px',
-                          left: '5px',
-                          transform: 'rotateX(-30deg) rotateY(0deg) rotateZ(0deg) translateZ(3px)',
+                          top: '0px',
+                          left: '6px',
+                          // Compensate for the isometric rotation (60deg X, 45deg Z)
+                          transform: 'rotateX(-60deg) rotateZ(-45deg) translateZ(5px)',
                           ...(isSelected && {
                             animation: `${robotGlow} 1.5s infinite ease-in-out`
                           })
@@ -405,44 +406,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                           transform: 'rotateX(-30deg) translateZ(6px)',
                         },
                         
-                        // Robot identifier badge - prominent circular badge
-                        '& .robot-id-badge': {
-                          position: 'absolute',
-                          width: '22px',
-                          height: '22px',
-                          borderRadius: '50%',
-                          backgroundColor: '#FFFFFF',
-                          color: '#000000',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 'bold',
-                          fontSize: '14px',
-                          top: '-36px',
-                          left: '50%',
-                          transform: 'translateX(-50%) rotateX(0deg)',
-                          boxShadow: '0 0 10px rgba(0, 0, 0, 0.7)',
-                          border: '2px solid #000000',
-                          zIndex: 10,
-                          animation: `${pulseAnimation} 2s infinite ease-in-out`,
-                          fontFamily: '"Orbitron", "Roboto Mono", monospace',
-                        },
-                        
-                        // Arrow pointing to robot
-                        '& .robot-pointer-arrow': {
-                          position: 'absolute',
-                          width: '0',
-                          height: '0',
-                          top: '-16px',
-                          left: '50%',
-                          transform: 'translateX(-50%)',
-                          borderLeft: '8px solid transparent',
-                          borderRight: '8px solid transparent',
-                          borderTop: '8px solid #FFFFFF',
-                          zIndex: 10,
-                          animation: `${arrowBounce} 1s infinite ease-in-out`,
-                          filter: 'drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5))',
-                        }
+                        // Robot styling optimized for true vertical appearance
+                        // (Robot identifier badges moved outside the grid)
                       })
                     }}
                   >
@@ -460,8 +425,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                         <div className="robot-leg-left" />
                         <div className="robot-leg-right" />
                         <div className="robot-scan" />
-                        <div className="robot-id-badge">{unitAtPos.name}</div>
-                        <div className="robot-pointer-arrow" />
+                        {/* Identifier badges moved outside grid */}
                       </>
                     )}
                   </Box>
@@ -471,6 +435,87 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
           );
         })}
       </Box>
+
+      {/* Floating identifier badges - moved outside the grid to make them truly hover above it */}
+      {viewMode === 'isometric' && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            pointerEvents: 'none',
+            zIndex: 100,
+          }}
+        >
+          {Object.values(units).map((unit) => {
+            const playerColor = players?.[unit.player_id]?.color || '#F44336';
+            const isSelected = unit.name === selectedUnit;
+            
+            // Calculate position based on grid and unit positions
+            const offsetX = (unit.position.x * 30) + (gridWidth * 15) - 15;
+            const offsetY = (gridHeight - unit.position.y - 1) * 30 + 85;  // Position above the grid
+            
+            return (
+              <Box 
+                key={`badge-${unit.name}`}
+                sx={{
+                  position: 'absolute',
+                  left: `${offsetX}px`,
+                  top: `${offsetY}px`,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  transform: 'perspective(800px)',
+                  transformStyle: 'preserve-3d',
+                  zIndex: isSelected ? 150 : 100,
+                }}
+              >
+                {/* Identifier badge */}
+                <Box
+                  sx={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '50%',
+                    backgroundColor: '#FFFFFF',
+                    color: '#000000',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 'bold',
+                    fontSize: '14px',
+                    boxShadow: isSelected 
+                      ? '0 0 15px rgba(255, 255, 0, 0.7)' 
+                      : '0 0 10px rgba(0, 0, 0, 0.7)',
+                    border: `2px solid ${isSelected ? playerColor : '#000000'}`,
+                    animation: `${pulseAnimation} 2s infinite ease-in-out`,
+                    fontFamily: '"Orbitron", "Roboto Mono", monospace',
+                    userSelect: 'none',
+                    transform: 'rotateX(0deg)',
+                  }}
+                >
+                  {unit.name}
+                </Box>
+                
+                {/* Connecting arrow */}
+                <Box
+                  sx={{
+                    width: '0',
+                    height: '0',
+                    marginTop: '2px',
+                    borderLeft: '6px solid transparent',
+                    borderRight: '6px solid transparent',
+                    borderTop: `12px solid ${isSelected ? playerColor : '#FFFFFF'}`,
+                    filter: 'drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5))',
+                    animation: `${arrowBounce} 1s infinite ease-in-out`,
+                  }}
+                />
+              </Box>
+            );
+          })}
+        </Box>
+      )}
 
       {/* D-pad control */}
       <Paper elevation={3} sx={{ p: 2, width: 'fit-content' }}>
