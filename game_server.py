@@ -20,7 +20,7 @@ from typing import Any, Dict, Optional
 
 import websockets
 
-from game_engine import GameEngine
+from game_engine import GameEngine, Unit
 
 # Configure logging
 logging.basicConfig(
@@ -624,7 +624,7 @@ class GameServer:
                         json.dumps(
                             {
                                 "type": "error",
-                                "message": "Missing position or player_id for admin_place_unit command",
+                                "message": "Missing position or player_id",
                             }
                         )
                     )
@@ -761,7 +761,7 @@ class GameServer:
                         json.dumps(
                             {
                                 "type": "error",
-                                "message": "Missing position or terrain for admin_change_terrain command",
+                                "message": "Missing position or terrain",
                             }
                         )
                     )
