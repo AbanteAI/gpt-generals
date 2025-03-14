@@ -235,7 +235,8 @@ class GameEngine:
             unit_name: Name of the unit to move
             direction: Direction to move ('up', 'down', 'left', 'right')
             player_id: ID of the player attempting to move the unit (if None, any player can move)
-            client_id: ID of the client attempting to move the unit (used to determine player_id if not provided)
+            client_id: ID of the client attempting to move the unit (used to
+                determine player_id if not provided)
 
         Returns:
             True if the move was successful, False otherwise

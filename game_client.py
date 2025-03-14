@@ -397,7 +397,8 @@ class GameClient:
             unit_name: Name of the unit to move
             direction: Direction to move ('up', 'down', 'left', 'right')
             player_id: Optional player ID. If not provided, the server will verify ownership.
-            client_id: Optional client ID. If provided, the server will use it to determine player ownership.
+            client_id: Optional client ID. If provided, the server will use it to
+                determine player ownership.
 
         Returns:
             True if command was sent successfully, False otherwise
