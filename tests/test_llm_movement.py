@@ -4,7 +4,7 @@ from unittest.mock import patch
 from game_engine import GameEngine
 from llm_utils import ParsedResponse
 from map_generator import MapGenerator, TerrainType
-from simulation import (
+from unit_movement import (
     Direction,
     MoveDecision,
     MoveDecisionResponse,
@@ -71,7 +71,7 @@ class TestLLMMovement(unittest.TestCase):
         # The map should show water at position (2,2)
         self.assertIn("~", description)
 
-    @patch("simulation.call_openrouter_structured")
+    @patch("unit_movement.call_openrouter_structured")
     def test_unit_move_decision(self, mock_call_openrouter_structured):
         """Test getting a move decision from the LLM (mocked)."""
         # Create a MoveDecision instance for the mock to return
@@ -116,7 +116,7 @@ class TestLLMMovement(unittest.TestCase):
             )
             self.assertEqual(response.raw_response, raw_response)
 
-    @patch("simulation.call_openrouter_structured")
+    @patch("unit_movement.call_openrouter_structured")
     def test_error_handling(self, mock_call_openrouter_structured):
         """Test error handling when the LLM call fails."""
         # Set the mock to raise an exception
