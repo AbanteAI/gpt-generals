@@ -142,6 +142,20 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
     return cell === TerrainType.WATER ? '#0077BE' : '#8BC34A';
   };
   
+  // Make sure grass/land tiles have no animation and are opaque
+  const getLandStyle = (isWater: boolean) => {
+    if (!isWater) {
+      return {
+        backgroundColor: '#8BC34A',
+        // No animations or transparency
+        opacity: 1,
+        position: 'relative',
+        zIndex: 1,
+      };
+    }
+    return {};
+  };
+  
   // Create a reversed copy of the map grid to display rows from bottom to top
   const reversedMapGrid = [...mapGrid].reverse();
   
@@ -167,63 +181,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
           overflow: 'hidden',
         }}
       >
-        {/* Continuous water pattern layer that spans underneath all tiles */}
-        {viewMode === 'isometric' && (
-          <Box
-            sx={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              pointerEvents: 'none',
-              zIndex: 0,
-              '&::before': {
-                ...waterPattern,
-                backgroundImage: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 40%), radial-gradient(circle at 70% 70%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 35%), radial-gradient(ellipse at 40% 60%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 50%)',
-                backgroundSize: '120px 120px, 80px 80px, 160px 120px',
-                opacity: 0.5,
-                animation: `${waterWave} 20s infinite linear`,
-              },
-              '&::after': {
-                ...waterPattern,
-                backgroundImage: 'linear-gradient(45deg, transparent 65%, rgba(255,255,255,0.3) 70%, transparent 75%), linear-gradient(135deg, transparent 75%, rgba(255,255,255,0.2) 80%, transparent 85%)',
-                backgroundSize: '60px 60px, 80px 80px',
-                opacity: 0.5,
-                animation: `${waterWave2} 15s infinite linear`,
-              }
-            }}
-          />
-        )}
-        
-        {/* Continuous water pattern for flat view */}
-        {viewMode === 'flat' && (
-          <Box
-            sx={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              pointerEvents: 'none',
-              zIndex: 0,
-              '&::before': {
-                ...waterPattern,
-                backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.3) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0.3) 75%, transparent 75%, transparent)',
-                backgroundSize: '40px 40px',
-                opacity: 0.5,
-                animation: `${waterWave} 15s infinite linear`,
-              },
-              '&::after': {
-                ...waterPattern,
-                backgroundImage: 'linear-gradient(-45deg, rgba(255,255,255,0.2) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.2) 75%, transparent 75%, transparent)',
-                backgroundSize: '30px 30px',
-                opacity: 0.5,
-                animation: `${waterWave2} 10s infinite linear`,
-              }
-            }}
-          />
-        )}
+        {/* Water patterns are now handled individually by each water tile */}
         {reversedMapGrid.map((row, reversedY) => {
           // Calculate the actual y position in the original grid
           const y = gridHeight - reversedY - 1;
@@ -259,7 +217,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      backgroundColor,
+                      ...(!isWater && !unitAtPos && !hasCoin ? getLandStyle(isWater) : { backgroundColor }),
                       ...(viewMode === 'isometric' && {
                         position: 'relative',
                         boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
@@ -288,9 +246,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                       ...(isWater && !unitAtPos && !hasCoin && viewMode === 'isometric' && {
                         position: 'relative',
                         overflow: 'hidden',
-                        // Base color with opacity for blending
+                        // Solid base color (not transparent)
                         backgroundColor: '#0088cc',
-                        // Tile-specific highlights and reflections
+                        // First layer of water animation - large water pattern
                         '&::before': {
                           content: '""',
                           position: 'absolute',
@@ -298,13 +256,15 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                           left: 0,
                           right: 0,
                           bottom: 0,
-                          backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 60%)',
-                          backgroundSize: '20px 20px',
-                          opacity: 0.6,
-                          animation: `${waterShimmer} 4s infinite ease-in-out`,
-                          zIndex: 2,
+                          backgroundImage: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 40%), radial-gradient(circle at 70% 70%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 35%), radial-gradient(ellipse at 40% 60%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 50%)',
+                          backgroundSize: '120px 120px, 80px 80px, 160px 120px',
+                          // Position background based on tile coordinates for continuity
+                          backgroundPosition: `calc(${x * 30}px) calc(${y * 30}px)`,
+                          opacity: 0.7,
+                          animation: `${waterWave} 20s infinite linear`,
+                          zIndex: 1,
                         },
-                        // Fine details and shimmer on top
+                        // Second layer - wave ripples
                         '&::after': {
                           content: '""',
                           position: 'absolute',
@@ -312,21 +272,33 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                           left: 0,
                           right: 0,
                           bottom: 0,
-                          backgroundImage: 'linear-gradient(45deg, transparent 90%, rgba(255,255,255,0.3) 95%, transparent 100%)',
-                          backgroundSize: '10px 10px',
-                          opacity: 0.7,
-                          // Calculate background position offset based on the tile position
-                          // This creates a continuous pattern across tiles
+                          backgroundImage: 'linear-gradient(45deg, transparent 85%, rgba(255,255,255,0.3) 90%, transparent 95%), linear-gradient(135deg, transparent 85%, rgba(255,255,255,0.2) 90%, transparent 95%)',
+                          backgroundSize: '60px 60px, 80px 80px',
+                          // Position background based on tile coordinates for continuity
                           backgroundPosition: `calc(${x * 30}px) calc(${y * 30}px)`,
-                          zIndex: 3,
+                          opacity: 0.6,
+                          animation: `${waterWave2} 15s infinite linear`,
+                          zIndex: 2,
                         },
-                        // Depth gradient
-                        background: 'linear-gradient(to bottom, rgba(0,170,221,0.7) 0%, rgba(0,102,170,0.9) 100%)',
-                        // Make water semi-transparent to show global patterns underneath
-                        opacity: 0.85,
-                        // Add subtle localized bubbles
+                        // Create an additional div for highlights and bubbles
                         '&': {
+                          position: 'relative',
                           '&:before': {
+                            content: '""',
+                            display: 'block',
+                            position: 'absolute',
+                            width: '100%',
+                            height: '100%',
+                            top: 0,
+                            left: 0,
+                            backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 70%)',
+                            backgroundSize: '20px 20px',
+                            opacity: 0.6,
+                            animation: `${waterShimmer} 4s infinite ease-in-out`,
+                            zIndex: 3,
+                          },
+                          // Add bubbles
+                          '&:after': {
                             content: '""',
                             display: 'block',
                             position: 'absolute',
@@ -337,6 +309,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                             // Randomize bubble positions using the tile coordinates
                             left: `${(x % 3) * 10 + 5}px`,
                             top: `${(y % 3) * 10 + 5}px`,
+                            boxShadow: 'rgba(255, 255, 255, 0.3) 10px 5px 0px, rgba(255, 255, 255, 0.4) -5px 10px 0px',
                             // Randomize animation timing
                             animation: `${waterBubble} ${Math.floor(Math.random() * 4) + 6}s infinite ease-out ${Math.floor(Math.random() * 3)}s`,
                             zIndex: 4,
@@ -348,8 +321,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                       ...(isWater && !unitAtPos && !hasCoin && viewMode === 'flat' && {
                         position: 'relative',
                         overflow: 'hidden',
-                        backgroundColor: 'rgba(0,136,204,0.85)', // Semi-transparent to allow global pattern to show
-                        // Tile-specific sparkle effect
+                        backgroundColor: '#0088cc', // Solid color, not transparent
+                        // First layer - large wave pattern for continuity between tiles
                         '&::before': {
                           content: '""',
                           position: 'absolute',
@@ -357,15 +330,15 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                           left: 0,
                           right: 0,
                           bottom: 0,
-                          // Calculate background position offset based on the tile position
+                          backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.3) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0.3) 75%, transparent 75%, transparent)',
+                          backgroundSize: '40px 40px',
+                          // Position background based on tile coordinates for continuity
                           backgroundPosition: `calc(${x * 30}px) calc(${y * 30}px)`,
-                          backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 70%)',
-                          backgroundSize: '15px 15px',
-                          opacity: 0.7,
-                          animation: `${waterShimmer} 3s infinite ease-in-out`,
+                          opacity: 0.5,
+                          animation: `${waterWave} 15s infinite linear`,
                           zIndex: 1,
                         },
-                        // Minimal wave pattern on top
+                        // Second layer - finer wave pattern
                         '&::after': {
                           content: '""',
                           position: 'absolute',
@@ -373,10 +346,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                           left: 0,
                           right: 0,
                           bottom: 0,
-                          backgroundImage: 'linear-gradient(45deg, transparent 94%, rgba(255,255,255,0.3) 98%, transparent 100%)',
-                          backgroundSize: '12px 12px',
-                          // Subtle offset based on position to maintain continuity
-                          backgroundPosition: `calc(${x * 10}px) calc(${y * 10}px)`,
+                          backgroundImage: 'linear-gradient(-45deg, rgba(255,255,255,0.2) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.2) 75%, transparent 75%, transparent)',
+                          backgroundSize: '30px 30px',
+                          // Position background based on tile coordinates for continuity
+                          backgroundPosition: `calc(${x * 30}px) calc(${y * 30}px)`,
+                          opacity: 0.4,
+                          animation: `${waterWave2} 10s infinite linear`,
                           zIndex: 2,
                         },
                       }),

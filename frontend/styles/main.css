@@ -133,59 +133,14 @@ body {
   box-shadow: 0 0 5px rgba(255, 215, 0, 0.7);
 }
 
-/* Global water pattern container */
-.water-body {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 0;
-}
+/* No global water patterns - all handled by individual water tiles */
 
-/* Large-scale water pattern for continuity */
-.water-pattern {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 200%;
-  height: 200%;
-  background-image: 
-    radial-gradient(ellipse at 30% 40%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 70%),
-    radial-gradient(circle at 70% 60%, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 60%);
-  background-size: 200px 200px, 150px 150px;
-  animation: water-wave 20s infinite linear;
-  opacity: 0.6;
-  pointer-events: none;
-}
-
-.water-ripples {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 200%;
-  height: 200%;
-  background-image: 
-    linear-gradient(45deg, transparent 96%, rgba(255,255,255,0.4) 98%, transparent 100%),
-    linear-gradient(135deg, transparent 95%, rgba(255,255,255,0.3) 98%, transparent 100%);
-  background-size: 50px 50px, 70px 70px;
-  animation: water-wave2 15s infinite linear;
-  opacity: 0.5;
-  pointer-events: none;
-}
-
-/* Individual water tiles */
+/* Individual water tiles - CSS classes used for regular DOM elements (non-JSX) */
 .isometric-water {
   position: relative;
   overflow: hidden;
-  /* Semi-transparent base color to allow global pattern to show through */
-  background-color: rgba(0,136,204,0.8);
-  /* Adds a subtle shimmer effect to each tile */
-  animation: water-shimmer 4s infinite ease-in-out;
-  /* Inner depth gradient */
-  background: linear-gradient(to bottom, rgba(0,170,221,0.8) 0%, rgba(0,102,170,0.9) 100%);
-  background-size: 100% 100%;
+  /* Solid base color */
+  background-color: #0088cc;
 }
 
 .isometric-water::before {
@@ -195,12 +150,12 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  /* Subtle pattern to add texture to each tile */
-  background-image: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 70%);
-  background-size: 20px 20px;
+  /* Large scale pattern for visual continuity between tiles */
+  background-image: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 40%), 
+                   radial-gradient(circle at 70% 70%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 35%);
+  background-size: '120px 120px, 80px 80px';
   opacity: 0.7;
-  /* Different animation from the global pattern */
-  animation: water-shimmer 4s infinite ease-in-out;
+  animation: water-wave 20s infinite linear;
   z-index: 1;
 }
 
@@ -211,32 +166,19 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  /* Fine details that appear on top */
-  background-image: linear-gradient(45deg, transparent 90%, rgba(255,255,255,0.3) 95%, transparent 100%);
-  background-size: 15px 15px;
+  /* Wave ripples */
+  background-image: linear-gradient(45deg, transparent 85%, rgba(255,255,255,0.3) 90%, transparent 95%);
+  background-size: 60px 60px;
   opacity: 0.6;
+  animation: water-wave2 15s infinite linear;
   z-index: 2;
 }
 
-/* Water bubbles */
-.isometric-water::before {
-  content: "";
-  display: block;
-  position: absolute;
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.4);
-  animation: water-bubble 8s infinite ease-out;
-  z-index: 3;
-}
-
-/* Enhanced flat view water styling */
+/* Water tile for flat view */
 .water {
   position: relative;
   overflow: hidden;
-  /* Semi-transparent to show global water pattern underneath */
-  background-color: rgba(0,136,204,0.8);
+  background-color: #0088cc;
 }
 
 .water::before {
@@ -246,10 +188,11 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  /* Subtle pattern for texture */
-  background-image: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 70%);
-  background-size: 15px 15px;
-  opacity: 0.7;
+  /* Large wave pattern */
+  background-image: linear-gradient(45deg, rgba(255,255,255,0.3) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0.3) 75%, transparent 75%, transparent);
+  background-size: 40px 40px;
+  opacity: 0.5;
+  animation: water-wave 15s infinite linear;
   z-index: 1;
 }
 
@@ -260,13 +203,23 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  /* Fine wave pattern on top */
-  background-image: linear-gradient(45deg, transparent 94%, rgba(255,255,255,0.2) 98%, transparent 100%);
-  background-size: 12px 12px;
+  /* Fine wave details */
+  background-image: linear-gradient(-45deg, rgba(255,255,255,0.2) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.2) 75%, transparent 75%, transparent);
+  background-size: 30px 30px;
+  opacity: 0.4;
+  animation: water-wave2 10s infinite linear;
   z-index: 2;
 }
 
-/* Animations */
+/* Make sure land/grass tiles have no animations */
+.land {
+  background-color: #8BC34A;
+  opacity: 1;
+  position: relative;
+  z-index: 1;
+}
+
+/* Water animations - applied only to water tiles */
 @keyframes water-wave {
   0% { background-position: 0 0; }
   100% { background-position: 120px 60px; }
