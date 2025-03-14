@@ -13,7 +13,8 @@ import {
   MenuItem,
   IconButton,
   Tooltip,
-  Fab
+  Fab,
+  SelectChangeEvent
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import CloseIcon from '@mui/icons-material/Close';
@@ -78,7 +79,7 @@ export const MapEditorPanel: React.FC<MapEditorPanelProps> = ({
     }
   };
 
-  const handlePlayerChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+  const handlePlayerChange = (event: SelectChangeEvent) => {
     const newPlayerId = event.target.value as string;
     setSelectedPlayerId(newPlayerId);
     
@@ -88,7 +89,7 @@ export const MapEditorPanel: React.FC<MapEditorPanelProps> = ({
     }
   };
 
-  const handleTerrainChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+  const handleTerrainChange = (event: SelectChangeEvent) => {
     const newTerrain = event.target.value as TerrainType;
     setSelectedTerrain(newTerrain);
     
