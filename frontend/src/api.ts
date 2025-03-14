@@ -304,6 +304,41 @@ export class GameClient {
     });
   }
   
+  // Update game configuration (host only)
+  public updateGameConfig(
+    width?: number,
+    height?: number,
+    waterProbability?: number,
+    numCoins?: number,
+    unitsPerPlayer?: number
+  ): Promise<boolean> {
+    return new Promise((resolve) => {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        console.error('Cannot update game config: WebSocket is not connected');
+        resolve(false);
+        return;
+      }
+      
+      const message: any = {
+        command: 'lobby_update_game_config'
+      };
+      
+      if (width !== undefined) message.width = width;
+      if (height !== undefined) message.height = height;
+      if (waterProbability !== undefined) message.water_probability = waterProbability;
+      if (numCoins !== undefined) message.num_coins = numCoins;
+      if (unitsPerPlayer !== undefined) message.units_per_player = unitsPerPlayer;
+      
+      try {
+        this.ws.send(JSON.stringify(message));
+        resolve(true);
+      } catch (error) {
+        console.error('Error updating game config:', error);
+        resolve(false);
+      }
+    });
+  }
+  
   // Start the game in the current room
   public startGame(): Promise<boolean> {
     return new Promise((resolve) => {

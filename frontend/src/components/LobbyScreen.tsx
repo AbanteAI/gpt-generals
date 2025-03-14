@@ -270,6 +270,49 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
     });
   };
 
+  // Game configuration state
+  const [gameConfig, setGameConfig] = useState({
+    width: 10,
+    height: 10,
+    waterProbability: 0.2,
+    numCoins: 5,
+    unitsPerPlayer: 1
+  });
+  
+  // Update game configuration
+  const handleConfigChange = async (updates: Partial<typeof gameConfig>) => {
+    if (!currentRoom) return;
+    
+    try {
+      setIsLoading(true);
+      await gameClient.updateGameConfig(
+        updates.width,
+        updates.height,
+        updates.waterProbability,
+        updates.numCoins,
+        updates.unitsPerPlayer
+      );
+    } catch (err) {
+      setError("Failed to update game configuration");
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Update local state when room config changes
+  useEffect(() => {
+    if (currentRoom?.gameConfig) {
+      setGameConfig({
+        width: currentRoom.gameConfig.width,
+        height: currentRoom.gameConfig.height,
+        waterProbability: currentRoom.gameConfig.waterProbability,
+        numCoins: currentRoom.gameConfig.numCoins,
+        unitsPerPlayer: currentRoom.gameConfig.unitsPerPlayer
+      });
+    }
+  }, [currentRoom?.gameConfig]);
+
   // If player is in a room, show the room details and waiting screen
   if (currentRoom) {
     const isHost = currentRoom.players.some(p => p.name === playerName && p.isHost);
@@ -303,6 +346,97 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
           </Typography>
           
           {renderRoomPlayers(currentRoom.players)}
+          
+          <Divider sx={{ my: 2 }} />
+          
+          <Typography variant="h6" gutterBottom>
+            Game Configuration:
+          </Typography>
+          
+          <Grid container spacing={2} sx={{ mb: 2 }}>
+            <Grid item xs={12} sm={6} md={4}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Board Size</InputLabel>
+                <Select
+                  value={`${gameConfig.width}x${gameConfig.height}`}
+                  label="Board Size"
+                  disabled={!isHost}
+                  onChange={(e) => {
+                    const [width, height] = e.target.value.split('x').map(Number);
+                    handleConfigChange({ width, height });
+                  }}
+                >
+                  <MenuItem value="8x8">Small (8x8)</MenuItem>
+                  <MenuItem value="10x10">Medium (10x10)</MenuItem>
+                  <MenuItem value="12x12">Large (12x12)</MenuItem>
+                  <MenuItem value="16x16">Extra Large (16x16)</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={4}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Water Density</InputLabel>
+                <Select
+                  value={gameConfig.waterProbability}
+                  label="Water Density"
+                  disabled={!isHost}
+                  onChange={(e) => {
+                    handleConfigChange({ waterProbability: e.target.value as number });
+                  }}
+                >
+                  <MenuItem value={0.1}>Low (10%)</MenuItem>
+                  <MenuItem value={0.2}>Medium (20%)</MenuItem>
+                  <MenuItem value={0.3}>High (30%)</MenuItem>
+                  <MenuItem value={0.4}>Very High (40%)</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={4}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Number of Coins</InputLabel>
+                <Select
+                  value={gameConfig.numCoins}
+                  label="Number of Coins"
+                  disabled={!isHost}
+                  onChange={(e) => {
+                    handleConfigChange({ numCoins: e.target.value as number });
+                  }}
+                >
+                  <MenuItem value={3}>Few (3)</MenuItem>
+                  <MenuItem value={5}>Medium (5)</MenuItem>
+                  <MenuItem value={8}>Many (8)</MenuItem>
+                  <MenuItem value={12}>Lots (12)</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={4}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Units Per Player</InputLabel>
+                <Select
+                  value={gameConfig.unitsPerPlayer}
+                  label="Units Per Player"
+                  disabled={!isHost}
+                  onChange={(e) => {
+                    handleConfigChange({ unitsPerPlayer: e.target.value as number });
+                  }}
+                >
+                  <MenuItem value={1}>1 Unit</MenuItem>
+                  <MenuItem value={2}>2 Units</MenuItem>
+                  <MenuItem value={3}>3 Units</MenuItem>
+                  <MenuItem value={5}>5 Units</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+          
+          {!isHost && (
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+              Only the host can modify game settings.
+            </Typography>
+          )}
           
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
             <FormControl sx={{ minWidth: 120 }}>

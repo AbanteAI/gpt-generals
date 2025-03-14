@@ -54,6 +54,12 @@ class GameRoom:
     created_at: int
     visible: bool = True  # Whether the room is visible in the lobby list
     game: Optional[GameEngine] = None
+    # Game configuration
+    width: int = 10
+    height: int = 10
+    water_probability: float = 0.2
+    num_coins: int = 5
+    units_per_player: int = 1
 
 
 class GameServer:
@@ -272,6 +278,13 @@ class GameServer:
                         "status": room.status,
                         "createdAt": room.created_at,
                         "visible": room.visible,
+                        "gameConfig": {
+                            "width": room.width,
+                            "height": room.height,
+                            "waterProbability": room.water_probability,
+                            "numCoins": room.num_coins,
+                            "unitsPerPlayer": room.units_per_player,
+                        },
                     }
                 )
 
@@ -629,6 +642,15 @@ class GameServer:
             player_color = message_data.get("player_color", "#F44336")  # Default red
             room_visible = message_data.get("room_visible", True)  # Default to visible
 
+            # Get game configuration parameters if provided
+            width = message_data.get("width", self.default_width)
+            height = message_data.get("height", self.default_height)
+            water_probability = message_data.get(
+                "water_probability", self.default_water_probability
+            )
+            num_coins = message_data.get("num_coins", self.default_num_coins)
+            units_per_player = message_data.get("units_per_player", 1)
+
             # Update client info
             client_info["name"] = player_name
             client_info["color"] = player_color
@@ -647,6 +669,11 @@ class GameServer:
                 created_at=int(time.time()),
                 visible=room_visible,
                 game=None,  # Game will be created when starting
+                width=width,
+                height=height,
+                water_probability=water_probability,
+                num_coins=num_coins,
+                units_per_player=units_per_player,
             )
 
             # Add the room
@@ -754,6 +781,68 @@ class GameServer:
             # Broadcast updated lobby state to all clients
             await self.broadcast_lobby_state()
 
+        elif command == "lobby_update_game_config":
+            room_id = client_info.get("room_id")
+
+            if not room_id or room_id not in self.rooms:
+                await websocket.send(
+                    json.dumps({"type": "error", "message": "Not in a valid room"})
+                )
+                return
+
+            room = self.rooms[room_id]
+
+            # Check if requester is the host
+            if client_id != room.host_id:
+                await websocket.send(
+                    json.dumps(
+                        {"type": "error", "message": "Only the host can update game configuration"}
+                    )
+                )
+                return
+
+            # Update room configuration with provided values
+            if "width" in message_data:
+                room.width = max(5, min(20, int(message_data["width"])))  # Limit between 5-20
+
+            if "height" in message_data:
+                room.height = max(5, min(20, int(message_data["height"])))  # Limit between 5-20
+
+            if "water_probability" in message_data:
+                room.water_probability = max(
+                    0.0, min(0.5, float(message_data["water_probability"]))
+                )  # Limit between 0-0.5
+
+            if "num_coins" in message_data:
+                room.num_coins = max(
+                    1, min(20, int(message_data["num_coins"]))
+                )  # Limit between 1-20
+
+            if "units_per_player" in message_data:
+                room.units_per_player = max(
+                    1, min(5, int(message_data["units_per_player"]))
+                )  # Limit between 1-5
+
+            # Send success response
+            await websocket.send(
+                json.dumps(
+                    {
+                        "type": "game_config_updated",
+                        "success": True,
+                        "gameConfig": {
+                            "width": room.width,
+                            "height": room.height,
+                            "waterProbability": room.water_probability,
+                            "numCoins": room.num_coins,
+                            "unitsPerPlayer": room.units_per_player,
+                        },
+                    }
+                )
+            )
+
+            # Broadcast updated lobby state to all clients
+            await self.broadcast_lobby_state()
+
         elif command == "lobby_start_game":
             room_id = client_info.get("room_id")
 
@@ -772,12 +861,12 @@ class GameServer:
                 )
                 return
 
-            # Create a new game for this room
+            # Create a new game for this room using the room's configuration
             game = GameEngine(
-                width=self.width,
-                height=self.height,
-                water_probability=self.water_probability,
-                num_coins=self.num_coins,
+                width=room.width,
+                height=room.height,
+                water_probability=room.water_probability,
+                num_coins=room.num_coins,
             )
 
             # Add all players in the room to the game
@@ -792,19 +881,22 @@ class GameServer:
 
                 player_ids[player_id] = game_player_id
 
-                # Add a unit for the player
-                try:
-                    unit_name = game.add_unit(game_player_id)
-                    logger.info(f"Added player {player_info['name']} with unit {unit_name}")
+                # Add multiple units for each player based on room configuration
+                units_added = 0
+                while units_added < room.units_per_player:
+                    try:
+                        unit_name = game.add_unit(game_player_id)
+                        logger.info(f"Added unit {unit_name} for player {player_info['name']}")
+                        units_added += 1
 
-                    # Find the websocket for this player
-                    for _ws, info in self.clients.items():
-                        if info["id"] == player_id:
-                            info["player_id"] = game_player_id
-                            break
-
-                except ValueError as e:
-                    logger.warning(f"Could not add unit for player: {e}")
+                        # Find the websocket for this player
+                        for _ws, info in self.clients.items():
+                            if info["id"] == player_id:
+                                info["player_id"] = game_player_id
+                                break
+                    except ValueError as e:
+                        logger.warning(f"Could not add more units for player: {e}")
+                        break
 
             # Set the game and update status
             room.game = game

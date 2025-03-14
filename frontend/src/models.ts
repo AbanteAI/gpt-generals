@@ -40,6 +40,14 @@ export interface ChatHistory {
 }
 
 // Lobby-related types
+export interface GameConfig {
+  width: number;
+  height: number;
+  waterProbability: number;
+  numCoins: number;
+  unitsPerPlayer: number;
+}
+
 export interface GameRoom {
   id: string;
   name: string;
@@ -48,6 +56,7 @@ export interface GameRoom {
   players: LobbyPlayer[];
   status: 'waiting' | 'playing' | 'finished';
   createdAt: number;
+  gameConfig?: GameConfig;
   visible?: boolean;
 }
 
