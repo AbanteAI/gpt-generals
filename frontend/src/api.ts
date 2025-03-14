@@ -48,6 +48,52 @@ export class GameClient {
   public getCurrentLobbyState() {
     return this.lobbyState;
   }
+  
+  // Get info for a specific room by ID
+  public getRoom(roomId: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        reject(new Error('WebSocket is not connected'));
+        return;
+      }
+      
+      const message = {
+        command: 'lobby_get_room',
+        room_id: roomId
+      };
+      
+      // Set up a one-time message handler for the response
+      const messageHandler = (event: MessageEvent) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'room_info' && data.success) {
+            this.ws?.removeEventListener('message', messageHandler);
+            resolve(data.room);
+          } else if (data.type === 'room_info' && !data.success) {
+            this.ws?.removeEventListener('message', messageHandler);
+            reject(new Error(data.message || 'Room not found'));
+          }
+        } catch (error) {
+          // Keep listening, not for us
+        }
+      };
+      
+      this.ws.addEventListener('message', messageHandler);
+      
+      // Set a timeout to prevent hanging
+      setTimeout(() => {
+        this.ws?.removeEventListener('message', messageHandler);
+        reject(new Error('Timeout waiting for room info'));
+      }, 5000);
+      
+      try {
+        this.ws.send(JSON.stringify(message));
+      } catch (error) {
+        this.ws.removeEventListener('message', messageHandler);
+        reject(error);
+      }
+    });
+  }
 
   // Subscribe to game state changes
   public subscribeToGameState(callback: (gameState: GameState) => void): () => void {
@@ -109,7 +155,7 @@ export class GameClient {
   }
 
   // Connect to WebSocket server
-  public connect(url: string = DEFAULT_WS_URL): void {
+  public connect(url: string = DEFAULT_WS_URL, roomId?: string): void {
     // Don't try to connect if already connected
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
       return;
@@ -119,6 +165,11 @@ export class GameClient {
     if (this.reconnectTimer !== null) {
       window.clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
+    }
+
+    // Add room ID to URL if provided
+    if (roomId) {
+      url = `${url}?room=${roomId}`;
     }
 
     // Create new WebSocket connection
@@ -172,7 +223,8 @@ export class GameClient {
   public createRoom(
     roomName: string, 
     playerName: string, 
-    playerColor: string
+    playerColor: string,
+    visible: boolean = true
   ): Promise<boolean> {
     return new Promise((resolve) => {
       if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
@@ -185,7 +237,8 @@ export class GameClient {
         command: 'lobby_create_room',
         room_name: roomName,
         player_name: playerName,
-        player_color: playerColor
+        player_color: playerColor,
+        room_visible: visible
       };
       
       try {

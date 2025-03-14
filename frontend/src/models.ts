@@ -48,6 +48,7 @@ export interface GameRoom {
   players: LobbyPlayer[];
   status: 'waiting' | 'playing' | 'finished';
   createdAt: number;
+  visible?: boolean;
 }
 
 export interface LobbyPlayer {
