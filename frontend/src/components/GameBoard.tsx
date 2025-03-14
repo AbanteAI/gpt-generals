@@ -210,9 +210,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                         perspective: '800px',
                         transformStyle: 'preserve-3d',
                         
-                        // Clear any background to avoid multiple coins appearing
-                        backgroundColor: 'transparent',
-                        
                         '&::before': {
                           content: '""',
                           position: 'absolute',
