@@ -40,7 +40,7 @@ describe('GameBoard', () => {
     render(<GameBoard gameState={mockGameState} />);
     // Find the cell at position 1,1 which should contain a coin
     const coinCell = screen.getByTestId('grid-cell-1-1');
-    expect(coinCell.textContent).toBe('c');
+    // We no longer use text for coins, just check the data attribute
     expect(coinCell.dataset.cellType).toBe('coin');
   });
 });
