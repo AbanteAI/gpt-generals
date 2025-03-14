@@ -32,7 +32,7 @@ describe('GameBoard', () => {
     turn: 1
   };
 
-  const renderWithAdmin = (ui, { isAdmin = true } = {}) => {
+  const renderWithAdmin = (ui: React.ReactElement, { isAdmin = true } = {}) => {
     return render(
       <AdminContext.Provider value={{ isAdmin, setIsAdmin: jest.fn() }}>
         {ui}
@@ -108,7 +108,7 @@ describe('GameBoard', () => {
         const [hasChanges, setHasChanges] = React.useState(false);
         
         // Set up a terrain change handler
-        const handleTerrainChange = (position, terrain) => {
+        const handleTerrainChange = (position: Position, terrain: TerrainType) => {
           setHasChanges(true);
           internalHasAdminChanges = true;
         };
