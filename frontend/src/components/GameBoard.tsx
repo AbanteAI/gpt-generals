@@ -50,6 +50,18 @@ const scanLine = keyframes`
   100% { height: 100%; top: 0; opacity: 0; }
 `;
 
+const pulseAnimation = keyframes`
+  0% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.7; }
+`;
+
+const arrowBounce = keyframes`
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+  100% { transform: translateY(0); }
+`;
+
 interface GameBoardProps {
   gameState: GameState;
 }
@@ -128,7 +140,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
           transformOrigin: 'center center',
           transition: 'transform 0.5s ease',
           perspective: '1000px',
-          marginTop: viewMode === 'isometric' ? '50px' : '0',
+          marginTop: viewMode === 'isometric' ? '60px' : '0',
         }}
       >
         {reversedMapGrid.map((row, reversedY) => {
@@ -229,12 +241,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                         zIndex: 5,
                         overflow: 'visible',
                         
-                        // Robot body - main body piece
+                        // Robot body - main body piece - make it more upright
                         '&::before': {
                           content: '""',
                           position: 'absolute',
-                          width: '22px',
-                          height: '22px',
+                          width: '20px',
+                          height: '24px',
                           borderRadius: '4px',
                           backgroundColor: unitAtPos.color,
                           border: '1px solid rgba(0,0,0,0.5)',
@@ -243,31 +255,31 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                             : '0 3px 6px rgba(0,0,0,0.4)',
                           zIndex: 1,
                           top: '1px',
-                          left: '4px',
-                          transform: 'rotateX(-20deg) translateZ(2px)',
+                          left: '5px',
+                          transform: 'rotateX(-30deg) rotateY(0deg) rotateZ(0deg) translateZ(3px)',
                           ...(isSelected && {
                             animation: `${robotGlow} 1.5s infinite ease-in-out`
                           })
                         },
                         
-                        // Robot head - smaller piece on top
+                        // Robot head - positioned better for upright look
                         '&::after': {
                           content: '""',
                           position: 'absolute',
                           width: '14px',
-                          height: '10px',
-                          top: '-6px',
+                          height: '12px',
+                          top: '-8px',
                           left: '8px',
                           backgroundColor: unitAtPos.color,
-                          borderRadius: '3px 3px 0 0',
+                          borderRadius: '5px 5px 0 0',
                           border: '1px solid rgba(0,0,0,0.5)',
                           borderBottom: 'none',
                           boxShadow: '0 -2px 3px rgba(0,0,0,0.2)',
                           zIndex: 2,
-                          transform: 'rotateX(-10deg) translateZ(4px)',
+                          transform: 'rotateX(-30deg) translateZ(5px)',
                         },
                         
-                        // Robot eyes - small glowing indicators
+                        // Robot eyes - adjusted for upright look
                         '& .robot-eyes': {
                           position: 'absolute',
                           width: '10px',
@@ -275,22 +287,22 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                           backgroundColor: 'rgba(255,255,255,0.9)',
                           borderRadius: '1px',
                           zIndex: 3,
-                          top: '-2px',
+                          top: '-4px',
                           left: '10px',
                           boxShadow: '0 0 3px rgba(255,255,255,0.8)',
-                          transform: 'rotateX(-10deg) translateZ(6px)',
+                          transform: 'rotateX(-30deg) translateZ(7px)',
                         },
                         
                         // Left antenna
                         '& .robot-antenna-left': {
                           position: 'absolute',
                           width: '1px',
-                          height: '6px',
+                          height: '8px',
                           backgroundColor: 'rgba(255,255,255,0.8)',
-                          top: '-12px',
+                          top: '-15px',
                           left: '10px',
                           zIndex: 3,
-                          transform: 'rotateX(-10deg) translateZ(4px)',
+                          transform: 'rotateX(-30deg) translateZ(6px)',
                           '&::after': {
                             content: '""',
                             position: 'absolute',
@@ -308,12 +320,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                         '& .robot-antenna-right': {
                           position: 'absolute',
                           width: '1px',
-                          height: '6px',
+                          height: '8px',
                           backgroundColor: 'rgba(255,255,255,0.8)',
-                          top: '-12px',
+                          top: '-15px',
                           left: '20px',
                           zIndex: 3,
-                          transform: 'rotateX(-10deg) translateZ(4px)',
+                          transform: 'rotateX(-30deg) translateZ(6px)',
                           '&::after': {
                             content: '""',
                             position: 'absolute',
@@ -327,55 +339,55 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                           }
                         },
                         
-                        // Left arm
+                        // Left arm - adjusted for more upright stance
                         '& .robot-arm-left': {
                           position: 'absolute',
                           width: '3px',
-                          height: '13px',
+                          height: '14px',
                           backgroundColor: 'rgba(0,0,0,0.6)',
-                          top: '6px',
-                          left: '1px',
+                          top: '5px',
+                          left: '0px',
                           zIndex: 0,
-                          transform: 'rotate(-20deg)',
+                          transform: 'rotateX(-30deg) rotateZ(-25deg) translateZ(3px)',
                           borderRadius: '1px',
                         },
                         
-                        // Right arm
+                        // Right arm - adjusted for more upright stance
                         '& .robot-arm-right': {
                           position: 'absolute',
                           width: '3px',
-                          height: '13px',
+                          height: '14px',
                           backgroundColor: 'rgba(0,0,0,0.6)',
-                          top: '6px',
-                          right: '1px',
+                          top: '5px',
+                          right: '0px',
                           zIndex: 0,
-                          transform: 'rotate(20deg)',
+                          transform: 'rotateX(-30deg) rotateZ(25deg) translateZ(3px)',
                           borderRadius: '1px',
                         },
                         
-                        // Left leg
+                        // Left leg - adjusted for more upright stance
                         '& .robot-leg-left': {
                           position: 'absolute',
                           width: '4px',
-                          height: '10px',
+                          height: '12px',
                           backgroundColor: 'rgba(0,0,0,0.7)',
-                          bottom: '-4px',
-                          left: '7px',
+                          bottom: '-2px',
+                          left: '8px',
                           zIndex: 0,
-                          transform: 'rotate(-5deg)',
+                          transform: 'rotateX(-60deg) rotateZ(-5deg) translateZ(-2px)',
                           borderRadius: '0 0 2px 2px',
                         },
                         
-                        // Right leg
+                        // Right leg - adjusted for more upright stance
                         '& .robot-leg-right': {
                           position: 'absolute',
                           width: '4px',
-                          height: '10px',
+                          height: '12px',
                           backgroundColor: 'rgba(0,0,0,0.7)',
-                          bottom: '-4px',
-                          right: '7px',
+                          bottom: '-2px',
+                          right: '8px',
                           zIndex: 0,
-                          transform: 'rotate(5deg)',
+                          transform: 'rotateX(-60deg) rotateZ(5deg) translateZ(-2px)',
                           borderRadius: '0 0 2px 2px',
                         },
                         
@@ -385,27 +397,51 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                           width: '100%',
                           height: '5%',
                           backgroundColor: 'rgba(255,255,255,0.3)',
-                          top: 0,
-                          left: 0,
+                          top: '0',
+                          left: '0',
                           zIndex: 4,
                           animation: `${scanLine} 3s infinite`,
                           pointerEvents: 'none',
+                          transform: 'rotateX(-30deg) translateZ(6px)',
                         },
                         
-                        // Robot name label - ensure it's visible in isometric view
-                        '& .robot-name': {
+                        // Robot identifier badge - prominent circular badge
+                        '& .robot-id-badge': {
                           position: 'absolute',
-                          top: '-20px',
+                          width: '22px',
+                          height: '22px',
+                          borderRadius: '50%',
+                          backgroundColor: '#FFFFFF',
+                          color: '#000000',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 'bold',
+                          fontSize: '14px',
+                          top: '-36px',
                           left: '50%',
                           transform: 'translateX(-50%) rotateX(0deg)',
-                          color: '#FFFFFF',
-                          fontSize: '14px',
-                          fontWeight: 'bold',
-                          textShadow: '0px 0px 3px #000000, 0px 0px 6px #000000',
+                          boxShadow: '0 0 10px rgba(0, 0, 0, 0.7)',
+                          border: '2px solid #000000',
                           zIndex: 10,
+                          animation: `${pulseAnimation} 2s infinite ease-in-out`,
                           fontFamily: '"Orbitron", "Roboto Mono", monospace',
-                          letterSpacing: '1px',
-                          pointerEvents: 'none',
+                        },
+                        
+                        // Arrow pointing to robot
+                        '& .robot-pointer-arrow': {
+                          position: 'absolute',
+                          width: '0',
+                          height: '0',
+                          top: '-16px',
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          borderLeft: '8px solid transparent',
+                          borderRight: '8px solid transparent',
+                          borderTop: '8px solid #FFFFFF',
+                          zIndex: 10,
+                          animation: `${arrowBounce} 1s infinite ease-in-out`,
+                          filter: 'drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5))',
                         }
                       })
                     }}
@@ -424,7 +460,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                         <div className="robot-leg-left" />
                         <div className="robot-leg-right" />
                         <div className="robot-scan" />
-                        <div className="robot-name">{unitAtPos.name}</div>
+                        <div className="robot-id-badge">{unitAtPos.name}</div>
+                        <div className="robot-pointer-arrow" />
                       </>
                     )}
                   </Box>
