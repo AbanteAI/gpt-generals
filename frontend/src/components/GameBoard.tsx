@@ -28,6 +28,18 @@ const robotHover = keyframes`
   100% { transform: translateY(0); }
 `;
 
+const robotGlow = keyframes`
+  0% { box-shadow: 0 0 5px 1px rgba(255, 255, 255, 0.3); }
+  50% { box-shadow: 0 0 10px 3px rgba(255, 255, 255, 0.5); }
+  100% { box-shadow: 0 0 5px 1px rgba(255, 255, 255, 0.3); }
+`;
+
+const labelPulse = keyframes`
+  0% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.9; }
+`;
+
 interface GameBoardProps {
   gameState: GameState;
 }
@@ -91,24 +103,111 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
   
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, position: 'relative' }}>
-      <Box
-        data-testid="game-grid"
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: `repeat(${gridWidth}, 30px)`,
-          gridTemplateRows: `repeat(${gridHeight}, 30px)`,
-          gap: viewMode === 'isometric' ? '1px' : '2px',
-          backgroundColor: '#ccc',
-          padding: '2px',
-          border: '1px solid #999',
-          transformStyle: 'preserve-3d',
-          transform: viewMode === 'isometric' ? 'rotateX(60deg) rotateZ(45deg)' : 'none',
-          transformOrigin: 'center center',
-          transition: 'transform 0.5s ease',
-          perspective: '1000px',
-          marginTop: viewMode === 'isometric' ? '50px' : '0',
-        }}
-      >
+      {/* Container for both grid and floating labels */}
+      <Box sx={{ position: 'relative' }}>
+        {/* Floating labels for isometric view */}
+        {viewMode === 'isometric' && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              zIndex: 100,
+              pointerEvents: 'none', // Make sure clicks pass through to the grid
+            }}
+          >
+            {Object.values(units).map((unit) => {
+              const playerColor = players?.[unit.player_id]?.color || '#F44336';
+              const isSelected = unit.name === selectedUnit;
+              
+              // Calculate position using isometric projection
+              // For the correct isometric offset, we need to apply the same transform as the grid
+              // but to the unit coordinates, then position them in screen space
+              const cellSize = 30; // Size of each grid cell
+              const gap = viewMode === 'isometric' ? 1 : 2; // Gap size matching the grid
+              
+              // The isometric projection formula:
+              // screen_x = (grid_x - grid_y) * (cellSize/2) + offset
+              // screen_y = (grid_x + grid_y) * (cellSize/4) + offset
+              const isoX = (unit.position.x - unit.position.y) * (cellSize/2 + gap/2) + (gridWidth * cellSize / 2);
+              const isoY = (unit.position.x + unit.position.y) * (cellSize/4 + gap/4) + 20;
+              
+              return (
+                <Box
+                  key={`label-${unit.name}`}
+                  sx={{
+                    position: 'absolute',
+                    left: `${isoX}px`,
+                    top: `${isoY - 35}px`, // Raise it above the unit
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                  }}
+                >
+                  {/* Unit name badge */}
+                  <Box
+                    sx={{
+                      width: '26px',
+                      height: '26px',
+                      borderRadius: '50%',
+                      backgroundColor: 'white',
+                      color: 'black',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 'bold',
+                      fontSize: '16px',
+                      boxShadow: '0 0 8px rgba(0,0,0,0.6)',
+                      border: `2px solid ${isSelected ? playerColor : 'black'}`,
+                      animation: `${labelPulse} 2s infinite ease-in-out`,
+                      // Apply a counter-rotation to keep the label upright
+                      transform: 'rotateX(-60deg) rotateZ(-45deg)',
+                    }}
+                  >
+                    {unit.name}
+                  </Box>
+                  
+                  {/* Connecting arrow */}
+                  <Box
+                    sx={{
+                      width: 0,
+                      height: 0,
+                      marginTop: '2px',
+                      borderLeft: '6px solid transparent',
+                      borderRight: '6px solid transparent',
+                      borderTop: `10px solid ${isSelected ? playerColor : 'white'}`,
+                      filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.5))',
+                      // Match the counter-rotation
+                      transform: 'rotateX(-60deg) rotateZ(-45deg)',
+                    }}
+                  />
+                </Box>
+              );
+            })}
+          </Box>
+        )}
+        
+        {/* Game grid */}
+        <Box
+          data-testid="game-grid"
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${gridWidth}, 30px)`,
+            gridTemplateRows: `repeat(${gridHeight}, 30px)`,
+            gap: viewMode === 'isometric' ? '1px' : '2px',
+            backgroundColor: '#ccc',
+            padding: '2px',
+            border: '1px solid #999',
+            transformStyle: 'preserve-3d',
+            transform: viewMode === 'isometric' ? 'rotateX(60deg) rotateZ(45deg)' : 'none',
+            transformOrigin: 'center center',
+            transition: 'transform 0.5s ease',
+            perspective: '1000px',
+            marginTop: viewMode === 'isometric' ? '50px' : '0',
+          }}
+        >
         {reversedMapGrid.map((row, reversedY) => {
           // Calculate the actual y position in the original grid
           const y = gridHeight - reversedY - 1;
@@ -199,31 +298,41 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                         }
                       }),
                       
-                      // Unit styling in isometric view
+                      // Simple but cool robot styling in isometric view
                       ...(unitAtPos && viewMode === 'isometric' && {
+                        position: 'relative',
                         animation: `${robotHover} 2s infinite ease-in-out`,
-                        // Replace text with a robot shape
+                        // Main robot body
                         '&::before': {
                           content: '""',
                           position: 'absolute',
-                          width: '20px',
-                          height: '20px',
-                          borderRadius: '2px',
+                          width: '22px',
+                          height: '22px',
+                          top: '4px',
+                          left: '4px',
+                          borderRadius: '3px',
                           backgroundColor: unitAtPos.color,
-                          border: '1px solid rgba(0,0,0,0.3)',
-                          boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                          border: '1px solid rgba(0,0,0,0.4)',
+                          boxShadow: isSelected 
+                            ? `0 0 10px 3px ${unitAtPos.color}` 
+                            : '0 2px 4px rgba(0,0,0,0.3)',
                           zIndex: 1,
+                          ...(isSelected && {
+                            animation: `${robotGlow} 1.5s infinite ease-in-out`
+                          })
                         },
-                        // Robot eyes
+                        // Robot eye visor
                         '&::after': {
                           content: '""',
                           position: 'absolute',
-                          width: '10px',
+                          width: '14px',
                           height: '4px',
                           borderRadius: '1px',
-                          backgroundColor: 'rgba(255,255,255,0.8)',
+                          backgroundColor: 'rgba(255,255,255,0.9)',
+                          boxShadow: '0 0 3px rgba(255,255,255,0.5)',
                           zIndex: 2,
-                          top: '8px',
+                          top: '10px',
+                          left: '8px'
                         }
                       })
                     }}
@@ -236,6 +345,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
             </React.Fragment>
           );
         })}
+        </Box>
       </Box>
 
       {/* D-pad control */}

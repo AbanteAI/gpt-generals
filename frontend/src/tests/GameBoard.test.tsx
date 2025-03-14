@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { GameBoard } from '../components/GameBoard';
 import { TerrainType } from '../models';
 
@@ -28,7 +28,7 @@ describe('GameBoard', () => {
     expect(gridCells.length).toBe(4); // 2x2 grid
   });
 
-  it('displays unit in correct position', () => {
+  it('displays unit in correct position in flat view', () => {
     render(<GameBoard gameState={mockGameState} />);
     // Find the cell at position 0,0 which should contain unit A
     const unitCell = screen.getByTestId('grid-cell-0-0');
@@ -42,5 +42,27 @@ describe('GameBoard', () => {
     const coinCell = screen.getByTestId('grid-cell-1-1');
     expect(coinCell.textContent).toBe('c');
     expect(coinCell.dataset.cellType).toBe('coin');
+  });
+  
+  it('toggles between flat and isometric view', () => {
+    render(<GameBoard gameState={mockGameState} />);
+    
+    // Initially in flat view
+    expect(screen.getByTestId('game-grid')).not.toHaveStyle('transform: rotateX(60deg) rotateZ(45deg)');
+    
+    // Find and click the view toggle button
+    const viewToggleButton = screen.getByRole('button', {
+      name: /switch to isometric view/i,
+    });
+    fireEvent.click(viewToggleButton);
+    
+    // Now should be in isometric view
+    expect(screen.getByTestId('game-grid')).toHaveStyle('transform: rotateX(60deg) rotateZ(45deg)');
+    
+    // Check that unit cell doesn't display text in isometric view
+    // But the unit letter should still be visible in the floating label
+    const unitCell = screen.getByTestId('grid-cell-0-0');
+    expect(unitCell.textContent).toBe('');
+    expect(screen.getAllByText('A')).toHaveLength(1); // Unit name should be in the floating label
   });
 });
