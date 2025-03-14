@@ -632,6 +632,13 @@ class GameServer:
 
                 # Try to add a unit at the specified position
                 try:
+                    # Ensure game object exists
+                    if game is None:
+                        await websocket.send(
+                            json.dumps({"type": "error", "message": "Game not found"})
+                        )
+                        return
+
                     # Convert position from [x, y] to (x, y) for game engine
                     x, y = position
                     position_tuple = (x, y)
@@ -705,6 +712,13 @@ class GameServer:
 
                 # Try to add a coin at the specified position
                 try:
+                    # Ensure game object exists
+                    if game is None:
+                        await websocket.send(
+                            json.dumps({"type": "error", "message": "Game not found"})
+                        )
+                        return
+
                     # Convert position from [x, y] to (x, y) for game engine
                     x, y = position
                     position_tuple = (x, y)
@@ -769,6 +783,13 @@ class GameServer:
 
                 # Try to change the terrain at the specified position
                 try:
+                    # Ensure game object exists
+                    if game is None:
+                        await websocket.send(
+                            json.dumps({"type": "error", "message": "Game not found"})
+                        )
+                        return
+
                     # Convert position from [x, y] to (x, y) for game engine
                     x, y = position
 
