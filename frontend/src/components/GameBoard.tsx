@@ -79,6 +79,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState: initialGameStat
   const handleCellClick = (x: number, y: number) => {
     // If we're in editor mode, handle edits
     if (isAdmin && editorMode) {
+      // For debugging, log the click coordinates
+      console.log(`Clicked cell at display coordinates: (${x}, ${y})`);
+      
       handleEditorAction(x, y);
       return;
     }
@@ -175,25 +178,37 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState: initialGameStat
 
   const changeTerrain = async (position: Position, terrain: TerrainType) => {
     try {
-      // In a real implementation, we would send this to the server
-      console.log(`Changing terrain at (${position.x}, ${position.y}) to ${terrain}`);
+      // For better debugging, log both the display position and how we're transforming it
+      console.log(`Changing terrain at display position (${position.x}, ${position.y}) to ${terrain}`);
       
-      // Send a chat message to indicate the action
+      // Send a chat message to indicate the action (using display coordinates)
       await gameClient.sendChatMessage('Admin', `Changed terrain at (${position.x}, ${position.y}) to ${terrain}`, 'system');
       
       // Create a copy of the map grid
       const newMapGrid = gameState.mapGrid.map(row => [...row]);
       
-      // We need to be careful with the y-coordinate here.
-      // When the user clicks on the grid, position.y is already in the display coordinates
-      // where 0 is the bottom row. We need to directly use that y without additional transformation.
+      // The coordinate system is tricky here.
+      // When the player clicks on a cell in the reversed display grid:
+      // - If they click the TOP row (which appears as position.y = 9 in a 10x10 grid),
+      //   we need to update the TOP row of the original grid (index 0)
+      // - If they click the BOTTOM row (position.y = 0), 
+      //   we need to update the BOTTOM row of the original grid (index 9 in a 10x10 grid)
+      
+      const gridHeight = newMapGrid.length;
+      
+      // Convert from display y-coordinate to grid y-coordinate:
+      // For a 10x10 grid:
+      // - Display (0,9) (top-right) should map to Grid (0,0) (top-left)
+      // - Display (0,0) (bottom-left) should map to Grid (0,9) (bottom-left)
+      const gridY = gridHeight - 1 - position.y;
+      
+      console.log(`Converted to grid coordinates: (${position.x}, ${gridY})`);
       
       // Update the terrain if it's within bounds
       if (position.x >= 0 && position.x < newMapGrid[0].length && 
-          position.y >= 0 && position.y < newMapGrid.length) {
-        // Directly modify the correct row - no double-inversion needed
-        // since our display shows the grid reversed already
-        newMapGrid[newMapGrid.length - 1 - position.y][position.x] = terrain;
+          gridY >= 0 && gridY < gridHeight) {
+        // Update the correct row in the grid
+        newMapGrid[gridY][position.x] = terrain;
         
         // Create a new game state with the updated map grid
         const newGameState = {
