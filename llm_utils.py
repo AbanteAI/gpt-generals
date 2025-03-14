@@ -21,7 +21,7 @@ def ensure_logs_directory() -> None:
     LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def log_model_call(model: str, messages: List[Dict[str, str]], response: str) -> None:
+def log_model_call(model: str, messages: List[ChatCompletionMessageParam], response: str) -> None:
     """
     Log a model call to a file.
 
