@@ -42,8 +42,10 @@ def log_model_call(model: str, messages: List[ChatCompletionMessageParam], respo
 
         f.write("=== INPUT ===\n")
         for msg in messages:
-            f.write(f"\n--- {msg['role'].upper()} ---\n")
-            f.write(f"{msg['content']}\n")
+            role = msg.get("role", "UNKNOWN").upper()
+            content = msg.get("content", "<no content>")
+            f.write(f"\n--- {role} ---\n")
+            f.write(f"{content}\n")
 
         f.write("\n=== OUTPUT ===\n")
         f.write(response)
