@@ -36,14 +36,10 @@ def create_llm_prompt(game: GameEngine, unit_name: str) -> str:
 
     # Get unit position
     unit = game.units[unit_name]
-    unit_pos = (unit["x"], unit["y"])
+    unit_pos = unit.position
 
-    # Get coin positions
-    coin_positions = []
-    for y, row in enumerate(game.map_grid):
-        for x, cell in enumerate(row):
-            if "coin" in cell:
-                coin_positions.append((x, y))
+    # Get coin positions from the game engine
+    coin_positions = game.coin_positions
 
     prompt = f"""
 You are playing a strategic game where you need to collect coins efficiently.
