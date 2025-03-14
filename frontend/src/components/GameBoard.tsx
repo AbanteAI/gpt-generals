@@ -12,8 +12,17 @@ import { keyframes } from '@emotion/react';
 
 // Define animations
 const coinRotate = keyframes`
-  0% { transform: rotateY(0deg); }
-  100% { transform: rotateY(360deg); }
+  0% { transform: translateY(0) rotateZ(0deg); }
+  25% { transform: translateY(-4px) rotateZ(90deg); }
+  50% { transform: translateY(0) rotateZ(180deg); }
+  75% { transform: translateY(-4px) rotateZ(270deg); }
+  100% { transform: translateY(0) rotateZ(360deg); }
+`;
+
+const coinShine = keyframes`
+  0% { background-position: -50px -50px; }
+  50% { background-position: 50px 50px; }
+  100% { background-position: -50px -50px; }
 `;
 
 const waterWave = keyframes`
@@ -122,12 +131,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                 const isSelected = unitAtPos && unitAtPos.name === selectedUnit;
                 const isWater = cell === TerrainType.WATER;
                 
-                // Determine the background color with priority: unit > coin > terrain
+                // Determine the background color with priority: unit > terrain (coins have custom styling)
                 let backgroundColor;
                 if (unitAtPos) {
                   backgroundColor = unitAtPos.color; // Use player's color for unit
                 } else if (hasCoin) {
-                  backgroundColor = '#FFC107'; // Yellow for coins
+                  backgroundColor = viewMode === 'isometric' ? 'transparent' : getTerrainColor(cell); // Transparent in isometric, terrain in flat
                 } else {
                   backgroundColor = getTerrainColor(cell);
                 }
@@ -166,7 +175,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                         boxSizing: 'border-box'
                       }),
                       fontWeight: 'bold',
-                      color: unitAtPos ? '#fff' : (hasCoin ? '#000' : undefined),
+                      color: unitAtPos ? '#fff' : undefined, // No text color for coins since we're using visual elements
                       cursor: unitAtPos ? 'pointer' : 'default',
                       
                       // Isometric view enhancements
@@ -182,20 +191,41 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                         backgroundSize: '10px 10px'
                       }),
                       
-                      // Coin animations in isometric view
+                      // Enhanced coin animations in isometric view
                       ...(hasCoin && viewMode === 'isometric' && {
-                        animation: `${coinRotate} 2s infinite linear`,
-                        borderRadius: '50%',
-                        boxShadow: '0 0 5px rgba(255, 215, 0, 0.7)',
-                        // Replace text 'c' with a circle
+                        position: 'relative',
+                        zIndex: 10, // Make sure coin appears above the terrain
+                        backgroundColor: 'transparent', // Make cell transparent to focus on the coin
+                        
+                        // The coin element with enhanced styling
                         '&::before': {
                           content: '""',
                           position: 'absolute',
-                          width: '16px',
-                          height: '16px',
+                          width: '20px',
+                          height: '20px',
                           borderRadius: '50%',
-                          backgroundColor: '#FFD700',
-                          border: '2px solid #B8860B',
+                          background: 'radial-gradient(circle at 30% 30%, #FFF7CC, #FFD700 30%, #B8860B)',
+                          backgroundSize: '200px 200px',
+                          animation: `${coinRotate} 3s infinite linear, ${coinShine} 6s infinite linear`,
+                          boxShadow: '0 5px 10px rgba(0,0,0,0.3), inset 0 -2px 5px rgba(0,0,0,0.2), inset 0 2px 2px rgba(255,255,255,0.7)',
+                          border: '1px solid #B8860B',
+                          transform: 'translateZ(10px)', // Lift the coin off the board
+                          left: 'calc(50% - 10px)',
+                          top: 'calc(50% - 10px)',
+                        },
+                        
+                        // Add a shadow beneath to emphasize floating effect
+                        '&::after': {
+                          content: '""',
+                          position: 'absolute',
+                          width: '16px',
+                          height: '4px',
+                          borderRadius: '50%',
+                          backgroundColor: 'rgba(0,0,0,0.3)',
+                          filter: 'blur(2px)',
+                          bottom: '5px',
+                          left: 'calc(50% - 8px)', // Center the shadow
+                          zIndex: 9,
                         }
                       }),
                       
@@ -225,11 +255,32 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                           zIndex: 2,
                           top: '8px',
                         }
+                      }),
+                      
+                      // Enhanced flat view styling for coins
+                      ...(hasCoin && viewMode === 'flat' && {
+                        position: 'relative',
+                        
+                        // Create a visual coin in flat view too
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          width: '20px',
+                          height: '20px',
+                          transform: 'translate(-50%, -50%)',
+                          borderRadius: '50%',
+                          background: 'radial-gradient(circle at 30% 30%, #FFF7CC, #FFD700 40%, #B8860B)',
+                          boxShadow: 'inset 0 -2px 5px rgba(0,0,0,0.2), inset 0 2px 2px rgba(255,255,255,0.7)',
+                          border: '1px solid #B8860B',
+                          zIndex: 2,
+                        }
                       })
                     }}
                   >
-                    {/* Only show text labels in flat view */}
-                    {viewMode === 'flat' && (unitAtPos ? unitAtPos.name : (hasCoin ? 'c' : ''))}
+                    {/* Only show text labels for units in flat view */}
+                    {viewMode === 'flat' && (unitAtPos ? unitAtPos.name : '')}
                   </Box>
                 );
               })}
