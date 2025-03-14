@@ -20,7 +20,7 @@ from typing import Any, Dict, Optional
 
 import websockets
 
-from game_engine import GameEngine
+from game_engine import GameEngine, Unit
 
 # Configure logging
 logging.basicConfig(
@@ -604,6 +604,235 @@ class GameServer:
 
                     # Send acknowledgment to the client
                     await websocket.send(json.dumps({"type": "reset_result", "success": True}))
+
+            # Admin commands for map editing
+            elif command == "admin_place_unit":
+                # Get client info
+                client_info = self.clients.get(websocket, {})
+                room_id = client_info.get("room_id")
+
+                # Determine which game to use
+                game = self.game
+                if room_id and room_id in self.rooms and self.rooms[room_id].game:
+                    game = self.rooms[room_id].game
+
+                position = message_data.get("position")
+                player_id = message_data.get("player_id")
+
+                if not position or not player_id:
+                    await websocket.send(
+                        json.dumps(
+                            {
+                                "type": "error",
+                                "message": "Missing position or player_id",
+                            }
+                        )
+                    )
+                    return
+
+                # Try to add a unit at the specified position
+                try:
+                    # Ensure game object exists
+                    if game is None:
+                        await websocket.send(
+                            json.dumps({"type": "error", "message": "Game not found"})
+                        )
+                        return
+
+                    # Convert position from [x, y] to (x, y) for game engine
+                    x, y = position
+                    position_tuple = (x, y)
+
+                    # Add the unit for the specified player
+                    if player_id in game.players:
+                        # Generate a unit name
+                        unit_names = list(game.units.keys())
+                        if not unit_names:
+                            next_unit_id = 0
+                        else:
+                            # Get the highest unit ID and increment
+                            next_unit_id = game.next_unit_id
+
+                        unit_name = f"{chr(65 + next_unit_id)}"
+
+                        # Create the unit directly
+                        game.units[unit_name] = Unit(
+                            name=unit_name, position=position_tuple, player_id=player_id
+                        )
+                        game.next_unit_id += 1
+
+                        # Send success response
+                        await websocket.send(
+                            json.dumps(
+                                {
+                                    "type": "admin_result",
+                                    "command": "admin_place_unit",
+                                    "success": True,
+                                    "unit_name": unit_name,
+                                }
+                            )
+                        )
+
+                        # Broadcast updated game state
+                        await self.send_game_state(room_id=room_id)
+                    else:
+                        await websocket.send(
+                            json.dumps(
+                                {"type": "error", "message": f"Player {player_id} not found"}
+                            )
+                        )
+                except Exception as e:
+                    logger.error(f"Error placing unit: {e}")
+                    await websocket.send(
+                        json.dumps({"type": "error", "message": f"Error placing unit: {str(e)}"})
+                    )
+
+            elif command == "admin_place_coin":
+                # Get client info
+                client_info = self.clients.get(websocket, {})
+                room_id = client_info.get("room_id")
+
+                # Determine which game to use
+                game = self.game
+                if room_id and room_id in self.rooms and self.rooms[room_id].game:
+                    game = self.rooms[room_id].game
+
+                position = message_data.get("position")
+
+                if not position:
+                    await websocket.send(
+                        json.dumps(
+                            {
+                                "type": "error",
+                                "message": "Missing position for admin_place_coin command",
+                            }
+                        )
+                    )
+                    return
+
+                # Try to add a coin at the specified position
+                try:
+                    # Ensure game object exists
+                    if game is None:
+                        await websocket.send(
+                            json.dumps({"type": "error", "message": "Game not found"})
+                        )
+                        return
+
+                    # Convert position from [x, y] to (x, y) for game engine
+                    x, y = position
+                    position_tuple = (x, y)
+
+                    # Check if there's already a coin at this position
+                    if position_tuple not in game.coin_positions:
+                        game.coin_positions.append(position_tuple)
+
+                        # Send success response
+                        await websocket.send(
+                            json.dumps(
+                                {
+                                    "type": "admin_result",
+                                    "command": "admin_place_coin",
+                                    "success": True,
+                                }
+                            )
+                        )
+
+                        # Broadcast updated game state
+                        await self.send_game_state(room_id=room_id)
+                    else:
+                        await websocket.send(
+                            json.dumps(
+                                {
+                                    "type": "admin_result",
+                                    "command": "admin_place_coin",
+                                    "success": False,
+                                    "message": "Coin already exists at this position",
+                                }
+                            )
+                        )
+                except Exception as e:
+                    logger.error(f"Error placing coin: {e}")
+                    await websocket.send(
+                        json.dumps({"type": "error", "message": f"Error placing coin: {str(e)}"})
+                    )
+
+            elif command == "admin_change_terrain":
+                # Get client info
+                client_info = self.clients.get(websocket, {})
+                room_id = client_info.get("room_id")
+
+                # Determine which game to use
+                game = self.game
+                if room_id and room_id in self.rooms and self.rooms[room_id].game:
+                    game = self.rooms[room_id].game
+
+                position = message_data.get("position")
+                terrain = message_data.get("terrain")
+
+                if not position or terrain is None:
+                    await websocket.send(
+                        json.dumps(
+                            {
+                                "type": "error",
+                                "message": "Missing position or terrain",
+                            }
+                        )
+                    )
+                    return
+
+                # Try to change the terrain at the specified position
+                try:
+                    # Ensure game object exists
+                    if game is None:
+                        await websocket.send(
+                            json.dumps({"type": "error", "message": "Game not found"})
+                        )
+                        return
+
+                    # Convert position from [x, y] to (x, y) for game engine
+                    x, y = position
+
+                    # Convert terrain string to TerrainType enum
+                    from map_generator import TerrainType
+
+                    terrain_type = TerrainType.WATER if terrain == "WATER" else TerrainType.LAND
+
+                    # Update the terrain
+                    if 0 <= y < len(game.map_grid) and 0 <= x < len(game.map_grid[0]):
+                        game.map_grid[y][x] = terrain_type
+
+                        # Send success response
+                        await websocket.send(
+                            json.dumps(
+                                {
+                                    "type": "admin_result",
+                                    "command": "admin_change_terrain",
+                                    "success": True,
+                                }
+                            )
+                        )
+
+                        # Broadcast updated game state
+                        await self.send_game_state(room_id=room_id)
+                    else:
+                        await websocket.send(
+                            json.dumps(
+                                {
+                                    "type": "admin_result",
+                                    "command": "admin_change_terrain",
+                                    "success": False,
+                                    "message": "Position out of bounds",
+                                }
+                            )
+                        )
+                except Exception as e:
+                    logger.error(f"Error changing terrain: {e}")
+                    await websocket.send(
+                        json.dumps(
+                            {"type": "error", "message": f"Error changing terrain: {str(e)}"}
+                        )
+                    )
 
             else:
                 await websocket.send(
