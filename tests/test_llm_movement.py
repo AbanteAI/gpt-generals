@@ -61,7 +61,7 @@ class TestLLMMovement(unittest.TestCase):
         description = get_game_state_description(self.game)
 
         # Check that the description contains key elements
-        self.assertIn("Current Game State:", description)
+        self.assertIn("Current state of the map:", description)
         self.assertIn("Unit Positions:", description)
         self.assertIn("A at (0, 0)", description)
         self.assertIn("B at (4, 4)", description)
