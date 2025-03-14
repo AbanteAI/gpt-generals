@@ -53,10 +53,25 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState: initialGameStat
   const gridHeight = mapGrid.length;
   const gridWidth = gridHeight > 0 ? mapGrid[0].length : 0;
   
-  // Update local game state when props change
+  // Update local game state when props change, but preserve admin changes
   useEffect(() => {
-    setGameState(initialGameState);
-  }, [initialGameState]);
+    // Only update if we're not in editor mode to preserve admin changes
+    if (!editorMode) {
+      setGameState(initialGameState);
+    } else {
+      // If in editor mode, merge changes with the incoming state without losing local edits
+      setGameState(prevState => {
+        // Create a new state object with initialGameState as the base
+        return {
+          ...initialGameState,
+          // Keep locally edited properties from the previous state
+          mapGrid: prevState.mapGrid,
+          units: prevState.units,
+          coinPositions: prevState.coinPositions
+        };
+      });
+    }
+  }, [initialGameState, editorMode]);
 
   const isUnitAtPosition = (x: number, y: number): UnitAtPosition | null => {
     for (const unitKey in units) {
