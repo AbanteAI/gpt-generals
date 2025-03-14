@@ -209,11 +209,15 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                         // The coin element with enhanced styling - spinning on edge
                         perspective: '800px',
                         transformStyle: 'preserve-3d',
+                        
+                        // Clear any background to avoid multiple coins appearing
+                        backgroundColor: 'transparent',
+                        
                         '&::before': {
                           content: '""',
                           position: 'absolute',
-                          width: '20px',
-                          height: '20px',
+                          width: '18px',
+                          height: '18px',
                           borderRadius: '50%',
                           background: 'linear-gradient(to right, #B8860B, #FFD700, #FFF7CC, #FFD700, #B8860B)',
                           backgroundSize: '200px 100%',
@@ -222,25 +226,23 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                           border: '1px solid #B8860B',
                           transformOrigin: 'center center',
                           transformStyle: 'preserve-3d',
-                          left: 'calc(50% - 10px)',
-                          top: 'calc(50% - 10px)',
+                          left: 'calc(50% - 9px)',
+                          top: 'calc(50% - 15px)', // Moved higher above the board
                           backfaceVisibility: 'visible',
                         },
                         
-                        // Add a shadow beneath to emphasize the coin spinning on the board
+                        // Shadow as a simple oval beneath
                         '&::after': {
                           content: '""',
                           position: 'absolute',
                           width: '10px',
-                          height: '4px',
+                          height: '3px',
                           borderRadius: '50%',
-                          backgroundColor: 'rgba(0,0,0,0.4)',
+                          backgroundColor: 'rgba(0,0,0,0.3)',
                           filter: 'blur(1px)',
-                          bottom: '2px',
+                          bottom: '10px',
                           left: 'calc(50% - 5px)', // Center the shadow
-                          zIndex: 9,
-                          animation: `${coinRotate} 2.5s infinite linear`,
-                          transform: 'rotateX(0deg) rotateY(0deg)', // Keep shadow flat on the surface
+                          zIndex: 1, // Below the coin
                         }
                       }),
                       
@@ -280,35 +282,38 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                         perspective: '800px',
                         transformStyle: 'preserve-3d',
                         
+                        // Clear any background to avoid multiple coins appearing
+                        backgroundColor: 'transparent',
+                        
                         '&::before': {
                           content: '""',
                           position: 'absolute',
-                          top: '50%',
+                          top: '40%', // Moved higher to appear above the board
                           left: '50%',
-                          width: '20px',
-                          height: '20px',
+                          width: '18px',
+                          height: '18px',
                           transform: 'translate(-50%, -50%)',
                           borderRadius: '50%',
                           background: 'linear-gradient(to right, #B8860B, #FFD700, #FFF7CC, #FFD700, #B8860B)',
                           boxShadow: '0 0 5px rgba(0,0,0,0.3)',
                           border: '1px solid #B8860B',
-                          zIndex: 2,
+                          zIndex: 5, // Ensure coin is above shadow
                           animation: `${coinRotate} 2.5s infinite linear, ${coinWobble} 1s infinite ease-in-out`,
                           transformStyle: 'preserve-3d', 
                           transformOrigin: 'center center',
                           backfaceVisibility: 'visible',
                         },
                         
-                        // Add shadow for flat view too
+                        // Simple shadow
                         '&::after': {
                           content: '""',
                           position: 'absolute',
                           width: '10px',
-                          height: '3px',
-                          top: 'calc(50% + 10px)',
+                          height: '2px',
+                          top: '60%', // Below the coin
                           left: 'calc(50% - 5px)',
                           borderRadius: '50%',
-                          backgroundColor: 'rgba(0,0,0,0.3)',
+                          backgroundColor: 'rgba(0,0,0,0.25)',
                           filter: 'blur(1px)',
                           zIndex: 1,
                         }
