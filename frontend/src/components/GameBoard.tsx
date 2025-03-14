@@ -10,13 +10,22 @@ import LanguageIcon from '@mui/icons-material/Language';
 import { moveUnit } from '../api';
 import { keyframes } from '@emotion/react';
 
-// Define animations
+// Define animations for coin spinning on edge (like a coin on a table)
 const coinRotate = keyframes`
-  0% { transform: translateY(0) rotateZ(0deg); }
-  25% { transform: translateY(-4px) rotateZ(90deg); }
-  50% { transform: translateY(0) rotateZ(180deg); }
-  75% { transform: translateY(-4px) rotateZ(270deg); }
-  100% { transform: translateY(0) rotateZ(360deg); }
+  0% { transform: perspective(400px) rotateX(85deg) rotateY(0deg); }
+  25% { transform: perspective(400px) rotateX(85deg) rotateY(90deg); }
+  50% { transform: perspective(400px) rotateX(85deg) rotateY(180deg); }
+  75% { transform: perspective(400px) rotateX(85deg) rotateY(270deg); }
+  100% { transform: perspective(400px) rotateX(85deg) rotateY(360deg); }
+`;
+
+// Add a wobble animation to make the spinning more realistic
+const coinWobble = keyframes`
+  0% { transform: translateY(0) rotateX(85deg); }
+  25% { transform: translateY(-1px) rotateX(80deg); }
+  50% { transform: translateY(0) rotateX(85deg); }
+  75% { transform: translateY(-1px) rotateX(90deg); }
+  100% { transform: translateY(0) rotateX(85deg); }
 `;
 
 const coinShine = keyframes`
@@ -197,35 +206,41 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                         zIndex: 10, // Make sure coin appears above the terrain
                         backgroundColor: 'transparent', // Make cell transparent to focus on the coin
                         
-                        // The coin element with enhanced styling
+                        // The coin element with enhanced styling - spinning on edge
+                        perspective: '800px',
+                        transformStyle: 'preserve-3d',
                         '&::before': {
                           content: '""',
                           position: 'absolute',
                           width: '20px',
                           height: '20px',
                           borderRadius: '50%',
-                          background: 'radial-gradient(circle at 30% 30%, #FFF7CC, #FFD700 30%, #B8860B)',
-                          backgroundSize: '200px 200px',
-                          animation: `${coinRotate} 3s infinite linear, ${coinShine} 6s infinite linear`,
-                          boxShadow: '0 5px 10px rgba(0,0,0,0.3), inset 0 -2px 5px rgba(0,0,0,0.2), inset 0 2px 2px rgba(255,255,255,0.7)',
+                          background: 'linear-gradient(to right, #B8860B, #FFD700, #FFF7CC, #FFD700, #B8860B)',
+                          backgroundSize: '200px 100%',
+                          animation: `${coinRotate} 2.5s infinite linear, ${coinShine} 6s infinite linear, ${coinWobble} 1s infinite ease-in-out`,
+                          boxShadow: '0 0 8px rgba(0,0,0,0.4)',
                           border: '1px solid #B8860B',
-                          transform: 'translateZ(10px)', // Lift the coin off the board
+                          transformOrigin: 'center center',
+                          transformStyle: 'preserve-3d',
                           left: 'calc(50% - 10px)',
                           top: 'calc(50% - 10px)',
+                          backfaceVisibility: 'visible',
                         },
                         
-                        // Add a shadow beneath to emphasize floating effect
+                        // Add a shadow beneath to emphasize the coin spinning on the board
                         '&::after': {
                           content: '""',
                           position: 'absolute',
-                          width: '16px',
+                          width: '10px',
                           height: '4px',
                           borderRadius: '50%',
-                          backgroundColor: 'rgba(0,0,0,0.3)',
-                          filter: 'blur(2px)',
-                          bottom: '5px',
-                          left: 'calc(50% - 8px)', // Center the shadow
+                          backgroundColor: 'rgba(0,0,0,0.4)',
+                          filter: 'blur(1px)',
+                          bottom: '2px',
+                          left: 'calc(50% - 5px)', // Center the shadow
                           zIndex: 9,
+                          animation: `${coinRotate} 2.5s infinite linear`,
+                          transform: 'rotateX(0deg) rotateY(0deg)', // Keep shadow flat on the surface
                         }
                       }),
                       
@@ -261,7 +276,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                       ...(hasCoin && viewMode === 'flat' && {
                         position: 'relative',
                         
-                        // Create a visual coin in flat view too
+                        // Create a visual coin in flat view too - spinning on edge
+                        perspective: '800px',
+                        transformStyle: 'preserve-3d',
+                        
                         '&::before': {
                           content: '""',
                           position: 'absolute',
@@ -271,10 +289,28 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                           height: '20px',
                           transform: 'translate(-50%, -50%)',
                           borderRadius: '50%',
-                          background: 'radial-gradient(circle at 30% 30%, #FFF7CC, #FFD700 40%, #B8860B)',
-                          boxShadow: 'inset 0 -2px 5px rgba(0,0,0,0.2), inset 0 2px 2px rgba(255,255,255,0.7)',
+                          background: 'linear-gradient(to right, #B8860B, #FFD700, #FFF7CC, #FFD700, #B8860B)',
+                          boxShadow: '0 0 5px rgba(0,0,0,0.3)',
                           border: '1px solid #B8860B',
                           zIndex: 2,
+                          animation: `${coinRotate} 2.5s infinite linear, ${coinWobble} 1s infinite ease-in-out`,
+                          transformStyle: 'preserve-3d', 
+                          transformOrigin: 'center center',
+                          backfaceVisibility: 'visible',
+                        },
+                        
+                        // Add shadow for flat view too
+                        '&::after': {
+                          content: '""',
+                          position: 'absolute',
+                          width: '10px',
+                          height: '3px',
+                          top: 'calc(50% + 10px)',
+                          left: 'calc(50% - 5px)',
+                          borderRadius: '50%',
+                          backgroundColor: 'rgba(0,0,0,0.3)',
+                          filter: 'blur(1px)',
+                          zIndex: 1,
                         }
                       })
                     }}
