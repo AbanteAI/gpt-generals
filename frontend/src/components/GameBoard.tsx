@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, IconButton, Paper, Grid, Tooltip } from '@mui/material';
-import { GameState, TerrainType } from '../models';
+import { GameState, TerrainType, Position } from '../models';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ViewInArIcon from '@mui/icons-material/ViewInAr';
 import LanguageIcon from '@mui/icons-material/Language';
-import { moveUnit } from '../api';
+import { moveUnit, gameClient } from '../api';
+import { MapEditorPanel } from './MapEditorPanel';
+import { useAdmin } from '../context/AdminContext';
 import { keyframes } from '@emotion/react';
 
 // Define animations
@@ -27,7 +29,6 @@ const robotHover = keyframes`
   50% { transform: translateY(-2px); }
   100% { transform: translateY(0); }
 `;
-
 interface GameBoardProps {
   gameState: GameState;
 }
@@ -37,15 +38,26 @@ interface UnitAtPosition {
   color: string;
 }
 
-export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
+export const GameBoard: React.FC<GameBoardProps> = ({ gameState: initialGameState }) => {
+  // Use local state to allow admin edits without needing server updates
+  const [gameState, setGameState] = useState<GameState>(initialGameState);
   const { mapGrid, units, players, coinPositions } = gameState;
   const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
+  const [editorMode, setEditorMode] = useState<'unit' | 'coin' | 'terrain' | null>(null);
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
+  const [selectedTerrain, setSelectedTerrain] = useState<TerrainType>(TerrainType.LAND);
   const [viewMode, setViewMode] = useState<'flat' | 'isometric'>('flat');
+  const { isAdmin } = useAdmin();
   
   // Calculate grid dimensions
   const gridHeight = mapGrid.length;
   const gridWidth = gridHeight > 0 ? mapGrid[0].length : 0;
   
+  // Update local game state when props change
+  useEffect(() => {
+    setGameState(initialGameState);
+  }, [initialGameState]);
+
   const isUnitAtPosition = (x: number, y: number): UnitAtPosition | null => {
     for (const unitKey in units) {
       const unit = units[unitKey];
@@ -65,9 +77,136 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
   };
 
   const handleCellClick = (x: number, y: number) => {
+    // If we're in editor mode, handle edits
+    if (isAdmin && editorMode) {
+      // For debugging, log the click coordinates
+      console.log(`Clicked cell at display coordinates: (${x}, ${y})`);
+      
+      handleEditorAction(x, y);
+      return;
+    }
+    
+    // Otherwise, handle normal unit selection
     const clickedUnit = isUnitAtPosition(x, y);
     if (clickedUnit) {
       setSelectedUnit(clickedUnit.name);
+    }
+  };
+
+  const handleEditorAction = (x: number, y: number) => {
+    // Don't process clicks if the position is invalid (used for signaling)
+    if (x < 0 || y < 0) return;
+    
+    // Create a position object
+    const position: Position = { x, y };
+    
+    // Handle different editor modes
+    if (editorMode === 'unit' && selectedPlayerId) {
+      // Send command to place unit
+      placeUnit(position, selectedPlayerId);
+    } else if (editorMode === 'coin') {
+      // Send command to place coin
+      placeCoin(position);
+    } else if (editorMode === 'terrain') {
+      // Send command to change terrain
+      changeTerrain(position, selectedTerrain);
+    }
+  };
+
+  const placeUnit = async (position: Position, playerId: string) => {
+    try {
+      // In a real implementation, we would send this to the server
+      console.log(`Placing unit at (${position.x}, ${position.y}) for player ${playerId}`);
+      
+      // Send a chat message to indicate the action
+      await gameClient.sendChatMessage('Admin', `Placed unit at (${position.x}, ${position.y}) for player ${playerId}`, 'system');
+      
+      // Simulate what the server would do by updating the local game state
+      // Generate a unique unit name based on the next available letter
+      const unitNames = Object.keys(units);
+      const nextUnitLetter = String.fromCharCode(
+        65 + unitNames.length % 26 + (unitNames.length >= 26 ? 26 : 0)
+      );
+      
+      // Create a new game state with the added unit
+      const newGameState = {
+        ...gameState,
+        units: {
+          ...gameState.units,
+          [nextUnitLetter]: {
+            name: nextUnitLetter,
+            position: position,
+            player_id: playerId
+          }
+        }
+      };
+      
+      // Update game state
+      setGameState(newGameState);
+    } catch (error) {
+      console.error('Error placing unit:', error);
+    }
+  };
+
+  const placeCoin = async (position: Position) => {
+    try {
+      // In a real implementation, we would send this to the server
+      console.log(`Placing coin at (${position.x}, ${position.y})`);
+      
+      // Send a chat message to indicate the action
+      await gameClient.sendChatMessage('Admin', `Placed coin at (${position.x}, ${position.y})`, 'system');
+      
+      // Check if there's already a coin at this position
+      const coinExists = gameState.coinPositions.some(
+        coin => coin.x === position.x && coin.y === position.y
+      );
+      
+      if (!coinExists) {
+        // Create a new game state with the added coin
+        const newGameState = {
+          ...gameState,
+          coinPositions: [...gameState.coinPositions, position]
+        };
+        
+        // Update game state
+        setGameState(newGameState);
+      }
+    } catch (error) {
+      console.error('Error placing coin:', error);
+    }
+  };
+
+  const changeTerrain = async (position: Position, terrain: TerrainType) => {
+    try {
+      // For better debugging
+      console.log(`Changing terrain at position (${position.x}, ${position.y}) to ${terrain}`);
+      
+      // Send a chat message to indicate the action
+      await gameClient.sendChatMessage('Admin', `Changed terrain at (${position.x}, ${position.y}) to ${terrain}`, 'system');
+      
+      // Create a copy of the map grid
+      const newMapGrid = gameState.mapGrid.map(row => [...row]);
+      
+      // Update the terrain directly without further coordinate conversion
+      // When we click on a cell, we get coordinates in the original grid coordinate system
+      // where (0,0) is the top-left. So we can use position.y directly.
+      if (position.x >= 0 && position.x < newMapGrid[0].length && 
+          position.y >= 0 && position.y < newMapGrid.length) {
+        
+        // Use position.y directly without conversion
+        newMapGrid[position.y][position.x] = terrain;
+        
+        // Create a new game state with the updated map grid
+        const newGameState = {
+          ...gameState,
+          mapGrid: newMapGrid
+        };
+        
+        // Update game state
+        setGameState(newGameState);
+      }
+    } catch (error) {
+      console.error('Error changing terrain:', error);
     }
   };
 
@@ -89,6 +228,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
   // Create a reversed copy of the map grid to display rows from bottom to top
   const reversedMapGrid = [...mapGrid].reverse();
   
+  // The MapEditorPanel and GameBoard communicate through callback props
+  // No need for a separate handler function as the callbacks directly update the state
+  
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, position: 'relative' }}>
       <Box
@@ -101,6 +243,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
           backgroundColor: '#ccc',
           padding: '2px',
           border: '1px solid #999',
+          cursor: editorMode ? 'crosshair' : 'default', // Change cursor based on editor mode
           transformStyle: 'preserve-3d',
           transform: viewMode === 'isometric' ? 'rotateX(60deg) rotateZ(45deg)' : 'none',
           transformOrigin: 'center center',
@@ -167,7 +310,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                       }),
                       fontWeight: 'bold',
                       color: unitAtPos ? '#fff' : (hasCoin ? '#000' : undefined),
-                      cursor: unitAtPos ? 'pointer' : 'default',
+                      cursor: editorMode ? 'crosshair' : (unitAtPos ? 'pointer' : 'default'),
                       
                       // Isometric view enhancements
                       ...(isWater && !unitAtPos && !hasCoin && viewMode === 'isometric' && {
@@ -225,6 +368,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                           zIndex: 2,
                           top: '8px',
                         }
+                      }),
+                      
+                      // Highlight cells when in editor mode to indicate they are clickable
+                      ...(editorMode && {
+                        '&:hover': {
+                          outline: '2px solid white',
+                          zIndex: 10 // Higher than the isometric styling z-index
+                        }
                       })
                     }}
                   >
@@ -238,51 +389,111 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
         })}
       </Box>
 
-      {/* D-pad control */}
-      <Paper elevation={3} sx={{ p: 2, width: 'fit-content' }}>
-        <Grid container direction="column" alignItems="center" spacing={1}>
-          <Grid item>
-            <IconButton 
-              color="primary" 
-              onClick={() => handleMoveUnit('up')}
-              disabled={!selectedUnit}
-            >
-              <ArrowUpwardIcon />
-            </IconButton>
+      {/* D-pad control - show only if not in editor mode */}
+      {!editorMode && (
+        <Paper elevation={3} sx={{ p: 2, width: 'fit-content' }}>
+          <Grid container direction="column" alignItems="center" spacing={1}>
+            <Grid item>
+              <IconButton 
+                color="primary" 
+                onClick={() => handleMoveUnit('up')}
+                disabled={!selectedUnit}
+              >
+                <ArrowUpwardIcon />
+              </IconButton>
+            </Grid>
+            <Grid item container justifyContent="center" spacing={1}>
+              <Grid item>
+                <IconButton 
+                  color="primary" 
+                  onClick={() => handleMoveUnit('left')}
+                  disabled={!selectedUnit}
+                >
+                  <ArrowBackIcon />
+                </IconButton>
+              </Grid>
+              <Grid item>
+                <IconButton 
+                  color="primary" 
+                  onClick={() => handleMoveUnit('down')}
+                  disabled={!selectedUnit}
+                >
+                  <ArrowDownwardIcon />
+                </IconButton>
+              </Grid>
+              <Grid item>
+                <IconButton 
+                  color="primary" 
+                  onClick={() => handleMoveUnit('right')}
+                  disabled={!selectedUnit}
+                >
+                  <ArrowForwardIcon />
+                </IconButton>
+              </Grid>
+            </Grid>
           </Grid>
-          <Grid item container justifyContent="center" spacing={1}>
-            <Grid item>
-              <IconButton 
-                color="primary" 
-                onClick={() => handleMoveUnit('left')}
-                disabled={!selectedUnit}
-              >
-                <ArrowBackIcon />
-              </IconButton>
-            </Grid>
-            <Grid item>
-              <IconButton 
-                color="primary" 
-                onClick={() => handleMoveUnit('down')}
-                disabled={!selectedUnit}
-              >
-                <ArrowDownwardIcon />
-              </IconButton>
-            </Grid>
-            <Grid item>
-              <IconButton 
-                color="primary" 
-                onClick={() => handleMoveUnit('right')}
-                disabled={!selectedUnit}
-              >
-                <ArrowForwardIcon />
-              </IconButton>
-            </Grid>
-          </Grid>
-        </Grid>
-      </Paper>
+        </Paper>
+      )}
 
-      {/* View mode toggle button */}
+      {/* Map Editor Panel */}
+      <MapEditorPanel 
+        onPlaceUnit={(position, playerId) => {
+          // Special position values are used for signaling
+          if (position.x === -2 && position.y === -2) {
+            // Reset editing mode
+            setEditorMode(null);
+            return;
+          }
+          
+          if (position.x === -1 && position.y === -1) {
+            // Just set the mode and player, don't perform the action yet
+            setEditorMode('unit');
+            setSelectedPlayerId(playerId);
+            return;
+          }
+          
+          // Real position - perform the action
+          placeUnit(position, playerId);
+        }}
+        onPlaceCoin={(position) => {
+          // Special position values are used for signaling
+          if (position.x === -2 && position.y === -2) {
+            // Reset editing mode
+            setEditorMode(null);
+            return;
+          }
+          
+          if (position.x === -1 && position.y === -1) {
+            // Just set the mode, don't perform the action yet
+            setEditorMode('coin');
+            return;
+          }
+          
+          // Real position - perform the action
+          placeCoin(position);
+        }}
+        onChangeTerrain={(position, terrain) => {
+          // Special position values are used for signaling
+          if (position.x === -2 && position.y === -2) {
+            // Reset editing mode
+            setEditorMode(null);
+            return;
+          }
+          
+          if (position.x === -1 && position.y === -1) {
+            // Just set the mode and terrain, don't perform the action yet
+            setEditorMode('terrain');
+            setSelectedTerrain(terrain);
+            return;
+          }
+          
+          // Real position - perform the action
+          changeTerrain(position, terrain);
+        }}
+        playerIds={Object.keys(players)}
+      />
+
+      {/* View mode toggle button - positioned to not overlap with editor button */}
       <Tooltip title={`Switch to ${viewMode === 'flat' ? 'isometric' : 'flat'} view`}>
         <IconButton 
           onClick={toggleViewMode}
@@ -290,7 +501,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
           sx={{ 
             position: 'fixed', 
             bottom: 16, 
-            right: 16,
+            right: 80, // Moved to the left of the editor button
             backgroundColor: 'white',
             boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
             '&:hover': {
