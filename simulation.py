@@ -375,7 +375,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run a GPT Generals simulation.")
     parser.add_argument("--turns", type=int, default=10, help="Number of turns to simulate")
     parser.add_argument("--custom-map", action="store_true", help="Use a custom map")
-    parser.add_argument("--random", action="store_true", help="Use random movement instead of LLM (default: False)")
+    parser.add_argument("--random", action="store_true", help="Use random movement instead of LLM")
 
     args = parser.parse_args()
 
