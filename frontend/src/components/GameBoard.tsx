@@ -23,9 +23,31 @@ const waterWave = keyframes`
 `;
 
 const robotHover = keyframes`
-  0% { transform: translateY(0); }
-  50% { transform: translateY(-2px); }
-  100% { transform: translateY(0); }
+  0% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-3px) rotate(-1deg); }
+  50% { transform: translateY(-4px) rotate(0deg); }
+  75% { transform: translateY(-3px) rotate(1deg); }
+  100% { transform: translateY(0) rotate(0deg); }
+`;
+
+const robotGlow = keyframes`
+  0% { box-shadow: 0 0 8px 2px rgba(255, 255, 255, 0.3); }
+  50% { box-shadow: 0 0 15px 5px rgba(255, 255, 255, 0.5); }
+  100% { box-shadow: 0 0 8px 2px rgba(255, 255, 255, 0.3); }
+`;
+
+const antennaBlinking = keyframes`
+  0% { opacity: 0.3; }
+  25% { opacity: 1; }
+  50% { opacity: 0.3; }
+  75% { opacity: 0.7; }
+  100% { opacity: 0.3; }
+`;
+
+const scanLine = keyframes`
+  0% { height: 0%; top: 0; opacity: 0.8; }
+  80% { height: 100%; top: 0; opacity: 0.8; }
+  100% { height: 100%; top: 0; opacity: 0; }
 `;
 
 interface GameBoardProps {
@@ -199,37 +221,212 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                         }
                       }),
                       
-                      // Unit styling in isometric view
+                      // Enhanced Robot styling in isometric view
                       ...(unitAtPos && viewMode === 'isometric' && {
-                        animation: `${robotHover} 2s infinite ease-in-out`,
-                        // Replace text with a robot shape
+                        position: 'relative',
+                        animation: `${robotHover} 3s infinite ease-in-out`,
+                        transformStyle: 'preserve-3d',
+                        zIndex: 5,
+                        overflow: 'visible',
+                        
+                        // Robot body - main body piece
                         '&::before': {
                           content: '""',
                           position: 'absolute',
-                          width: '20px',
-                          height: '20px',
-                          borderRadius: '2px',
+                          width: '22px',
+                          height: '22px',
+                          borderRadius: '4px',
                           backgroundColor: unitAtPos.color,
-                          border: '1px solid rgba(0,0,0,0.3)',
-                          boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                          border: '1px solid rgba(0,0,0,0.5)',
+                          boxShadow: isSelected 
+                            ? `0 0 12px 3px ${unitAtPos.color}` 
+                            : '0 3px 6px rgba(0,0,0,0.4)',
                           zIndex: 1,
+                          top: '1px',
+                          left: '4px',
+                          transform: 'rotateX(-20deg) translateZ(2px)',
+                          ...(isSelected && {
+                            animation: `${robotGlow} 1.5s infinite ease-in-out`
+                          })
                         },
-                        // Robot eyes
+                        
+                        // Robot head - smaller piece on top
                         '&::after': {
                           content: '""',
                           position: 'absolute',
-                          width: '10px',
-                          height: '4px',
-                          borderRadius: '1px',
-                          backgroundColor: 'rgba(255,255,255,0.8)',
+                          width: '14px',
+                          height: '10px',
+                          top: '-6px',
+                          left: '8px',
+                          backgroundColor: unitAtPos.color,
+                          borderRadius: '3px 3px 0 0',
+                          border: '1px solid rgba(0,0,0,0.5)',
+                          borderBottom: 'none',
+                          boxShadow: '0 -2px 3px rgba(0,0,0,0.2)',
                           zIndex: 2,
-                          top: '8px',
+                          transform: 'rotateX(-10deg) translateZ(4px)',
+                        },
+                        
+                        // Robot eyes - small glowing indicators
+                        '& .robot-eyes': {
+                          position: 'absolute',
+                          width: '10px',
+                          height: '3px',
+                          backgroundColor: 'rgba(255,255,255,0.9)',
+                          borderRadius: '1px',
+                          zIndex: 3,
+                          top: '-2px',
+                          left: '10px',
+                          boxShadow: '0 0 3px rgba(255,255,255,0.8)',
+                          transform: 'rotateX(-10deg) translateZ(6px)',
+                        },
+                        
+                        // Left antenna
+                        '& .robot-antenna-left': {
+                          position: 'absolute',
+                          width: '1px',
+                          height: '6px',
+                          backgroundColor: 'rgba(255,255,255,0.8)',
+                          top: '-12px',
+                          left: '10px',
+                          zIndex: 3,
+                          transform: 'rotateX(-10deg) translateZ(4px)',
+                          '&::after': {
+                            content: '""',
+                            position: 'absolute',
+                            width: '3px',
+                            height: '3px',
+                            borderRadius: '50%',
+                            backgroundColor: 'red',
+                            top: '-3px',
+                            left: '-1px',
+                            animation: `${antennaBlinking} 1.2s infinite`
+                          }
+                        },
+                        
+                        // Right antenna
+                        '& .robot-antenna-right': {
+                          position: 'absolute',
+                          width: '1px',
+                          height: '6px',
+                          backgroundColor: 'rgba(255,255,255,0.8)',
+                          top: '-12px',
+                          left: '20px',
+                          zIndex: 3,
+                          transform: 'rotateX(-10deg) translateZ(4px)',
+                          '&::after': {
+                            content: '""',
+                            position: 'absolute',
+                            width: '3px',
+                            height: '3px',
+                            borderRadius: '50%',
+                            backgroundColor: 'blue',
+                            top: '-3px',
+                            left: '-1px',
+                            animation: `${antennaBlinking} 1.5s infinite`
+                          }
+                        },
+                        
+                        // Left arm
+                        '& .robot-arm-left': {
+                          position: 'absolute',
+                          width: '3px',
+                          height: '13px',
+                          backgroundColor: 'rgba(0,0,0,0.6)',
+                          top: '6px',
+                          left: '1px',
+                          zIndex: 0,
+                          transform: 'rotate(-20deg)',
+                          borderRadius: '1px',
+                        },
+                        
+                        // Right arm
+                        '& .robot-arm-right': {
+                          position: 'absolute',
+                          width: '3px',
+                          height: '13px',
+                          backgroundColor: 'rgba(0,0,0,0.6)',
+                          top: '6px',
+                          right: '1px',
+                          zIndex: 0,
+                          transform: 'rotate(20deg)',
+                          borderRadius: '1px',
+                        },
+                        
+                        // Left leg
+                        '& .robot-leg-left': {
+                          position: 'absolute',
+                          width: '4px',
+                          height: '10px',
+                          backgroundColor: 'rgba(0,0,0,0.7)',
+                          bottom: '-4px',
+                          left: '7px',
+                          zIndex: 0,
+                          transform: 'rotate(-5deg)',
+                          borderRadius: '0 0 2px 2px',
+                        },
+                        
+                        // Right leg
+                        '& .robot-leg-right': {
+                          position: 'absolute',
+                          width: '4px',
+                          height: '10px',
+                          backgroundColor: 'rgba(0,0,0,0.7)',
+                          bottom: '-4px',
+                          right: '7px',
+                          zIndex: 0,
+                          transform: 'rotate(5deg)',
+                          borderRadius: '0 0 2px 2px',
+                        },
+                        
+                        // Scan line effect
+                        '& .robot-scan': {
+                          position: 'absolute',
+                          width: '100%',
+                          height: '5%',
+                          backgroundColor: 'rgba(255,255,255,0.3)',
+                          top: 0,
+                          left: 0,
+                          zIndex: 4,
+                          animation: `${scanLine} 3s infinite`,
+                          pointerEvents: 'none',
+                        },
+                        
+                        // Robot name label - ensure it's visible in isometric view
+                        '& .robot-name': {
+                          position: 'absolute',
+                          top: '-20px',
+                          left: '50%',
+                          transform: 'translateX(-50%) rotateX(0deg)',
+                          color: '#FFFFFF',
+                          fontSize: '14px',
+                          fontWeight: 'bold',
+                          textShadow: '0px 0px 3px #000000, 0px 0px 6px #000000',
+                          zIndex: 10,
+                          fontFamily: '"Orbitron", "Roboto Mono", monospace',
+                          letterSpacing: '1px',
+                          pointerEvents: 'none',
                         }
                       })
                     }}
                   >
-                    {/* Only show text labels in flat view */}
+                    {/* Show text labels in flat view */}
                     {viewMode === 'flat' && (unitAtPos ? unitAtPos.name : (hasCoin ? 'c' : ''))}
+                    
+                    {/* Add robot components in isometric view */}
+                    {viewMode === 'isometric' && unitAtPos && (
+                      <>
+                        <div className="robot-antenna-left" />
+                        <div className="robot-antenna-right" />
+                        <div className="robot-eyes" />
+                        <div className="robot-arm-left" />
+                        <div className="robot-arm-right" />
+                        <div className="robot-leg-left" />
+                        <div className="robot-leg-right" />
+                        <div className="robot-scan" />
+                        <div className="robot-name">{unitAtPos.name}</div>
+                      </>
+                    )}
                   </Box>
                 );
               })}
