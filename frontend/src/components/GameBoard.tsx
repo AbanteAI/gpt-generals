@@ -184,15 +184,16 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState: initialGameStat
       // Create a copy of the map grid
       const newMapGrid = gameState.mapGrid.map(row => [...row]);
       
-      // Update the terrain at the specified position
-      // Note: The grid is displayed with (0,0) at bottom-left, but stored with (0,0) at top-left
-      // so we need to invert the y-coordinate
-      const gridY = gameState.mapGrid.length - 1 - position.y;
+      // We need to be careful with the y-coordinate here.
+      // When the user clicks on the grid, position.y is already in the display coordinates
+      // where 0 is the bottom row. We need to directly use that y without additional transformation.
       
       // Update the terrain if it's within bounds
       if (position.x >= 0 && position.x < newMapGrid[0].length && 
-          gridY >= 0 && gridY < newMapGrid.length) {
-        newMapGrid[gridY][position.x] = terrain;
+          position.y >= 0 && position.y < newMapGrid.length) {
+        // Directly modify the correct row - no double-inversion needed
+        // since our display shows the grid reversed already
+        newMapGrid[newMapGrid.length - 1 - position.y][position.x] = terrain;
         
         // Create a new game state with the updated map grid
         const newGameState = {
