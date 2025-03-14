@@ -88,8 +88,37 @@ body {
 
 @keyframes water-wave {
   0% { background-position: 0 0; }
+  25% { background-position: 5px 2px; }
   50% { background-position: 10px 0; }
+  75% { background-position: 5px -2px; }
   100% { background-position: 0 0; }
+}
+
+@keyframes water-wave2 {
+  0% { background-position: 0 0; }
+  25% { background-position: -3px 1px; }
+  50% { background-position: -6px 0; }
+  75% { background-position: -3px -1px; }
+  100% { background-position: 0 0; }
+}
+
+@keyframes water-ripple {
+  0% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.2); opacity: 0.5; }
+  100% { transform: scale(1); opacity: 0.3; }
+}
+
+@keyframes water-shimmer {
+  0% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+  100% { opacity: 0.4; }
+}
+
+@keyframes water-bubble {
+  0% { transform: translateY(0) scale(0.1); opacity: 0; }
+  20% { opacity: 0.5; }
+  80% { opacity: 0.5; }
+  100% { transform: translateY(-8px) scale(0.3); opacity: 0; }
 }
 
 @keyframes robot-hover {
@@ -105,9 +134,99 @@ body {
 }
 
 .isometric-water {
-  animation: water-wave 3s infinite linear;
-  background-image: linear-gradient(45deg, #0077BE 25%, #0099FF 50%, #0077BE 75%);
-  background-size: 20px 20px;
+  position: relative;
+  overflow: hidden;
+  background-color: #0088cc;
+  animation: water-shimmer 4s infinite ease-in-out;
+  background: linear-gradient(135deg, #0066aa 0%, #0088cc 25%, #00aadd 50%, #0088cc 75%, #0066aa 100%), linear-gradient(to bottom, #00aadd 0%, #0077aa 100%);
+  background-size: 30px 30px, 100% 100%;
+  background-blend-mode: overlay;
+}
+
+.isometric-water::before {
+  content: "";
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  right: -5px;
+  bottom: -5px;
+  background-image: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 60%), 
+                   radial-gradient(circle at 70% 60%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 30%), 
+                   radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 40%);
+  background-size: 12px 12px, 15px 15px, 10px 10px;
+  opacity: 0.6;
+  animation: water-wave 6s infinite ease-in-out;
+  z-index: 1;
+}
+
+.isometric-water::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: linear-gradient(45deg, transparent 65%, rgba(255,255,255,0.3) 70%, transparent 75%), 
+                   linear-gradient(135deg, transparent 75%, rgba(255,255,255,0.2) 80%, transparent 85%);
+  background-size: 15px 15px, 20px 20px;
+  animation: water-wave2 4s infinite ease-in-out;
+  z-index: 2;
+}
+
+/* Water bubbles */
+.isometric-water:before, .isometric-water:after {
+  content: "";
+  display: block;
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.5);
+  box-shadow: rgba(255, 255, 255, 0.3) 10px 5px 0px, 
+              rgba(255, 255, 255, 0.4) -5px 10px 0px, 
+              rgba(255, 255, 255, 0.3) 5px -5px 0px;
+  animation: water-bubble 8s infinite ease-out;
+  z-index: 5;
+}
+
+.isometric-water:after {
+  left: 50%;
+  top: 50%;
+  animation-delay: 2s;
+  animation-duration: 6s;
+}
+
+/* Enhanced flat view water styling to match isometric quality */
+.water {
+  position: relative;
+  overflow: hidden;
+  background-color: #0088cc;
+}
+
+.water::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: linear-gradient(45deg, rgba(255,255,255,0.3) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0.3) 75%, transparent 75%, transparent);
+  background-size: 10px 10px;
+  animation: water-wave 4s infinite linear;
+  z-index: 1;
+}
+
+.water::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: linear-gradient(-45deg, rgba(255,255,255,0.2) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.2) 75%, transparent 75%, transparent);
+  background-size: 7px 7px;
+  animation: water-wave2 3s infinite linear;
+  z-index: 2;
 }
 
 .isometric-unit {

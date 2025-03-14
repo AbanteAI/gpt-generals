@@ -18,8 +18,37 @@ const coinRotate = keyframes`
 
 const waterWave = keyframes`
   0% { background-position: 0 0; }
+  25% { background-position: 5px 2px; }
   50% { background-position: 10px 0; }
+  75% { background-position: 5px -2px; }
   100% { background-position: 0 0; }
+`;
+
+const waterWave2 = keyframes`
+  0% { background-position: 0 0; }
+  25% { background-position: -3px 1px; }
+  50% { background-position: -6px 0; }
+  75% { background-position: -3px -1px; }
+  100% { background-position: 0 0; }
+`;
+
+const waterRipple = keyframes`
+  0% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.2); opacity: 0.5; }
+  100% { transform: scale(1); opacity: 0.3; }
+`;
+
+const waterShimmer = keyframes`
+  0% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+  100% { opacity: 0.4; }
+`;
+
+const waterBubble = keyframes`
+  0% { transform: translateY(0) scale(0.1); opacity: 0; }
+  20% { opacity: 0.5; }
+  80% { opacity: 0.5; }
+  100% { transform: translateY(-8px) scale(0.3); opacity: 0; }
 `;
 
 const robotHover = keyframes`
@@ -169,17 +198,88 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                       color: unitAtPos ? '#fff' : (hasCoin ? '#000' : undefined),
                       cursor: unitAtPos ? 'pointer' : 'default',
                       
-                      // Isometric view enhancements
+                      // Isometric view water enhancements
                       ...(isWater && !unitAtPos && !hasCoin && viewMode === 'isometric' && {
-                        animation: `${waterWave} 3s infinite linear`,
-                        backgroundImage: 'linear-gradient(45deg, #0077BE 25%, #0099FF 50%, #0077BE 75%)',
-                        backgroundSize: '20px 20px',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        backgroundColor: '#0088cc',
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: '-5px',
+                          left: '-5px',
+                          right: '-5px',
+                          bottom: '-5px',
+                          backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 60%), radial-gradient(circle at 70% 60%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 30%), radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 40%)',
+                          backgroundSize: '12px 12px, 15px 15px, 10px 10px',
+                          opacity: 0.6,
+                          animation: `${waterWave} 6s infinite ease-in-out`,
+                          zIndex: 1,
+                        },
+                        '&::after': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundImage: 'linear-gradient(45deg, transparent 65%, rgba(255,255,255,0.3) 70%, transparent 75%), linear-gradient(135deg, transparent 75%, rgba(255,255,255,0.2) 80%, transparent 85%)',
+                          backgroundSize: '15px 15px, 20px 20px',
+                          animation: `${waterWave2} 4s infinite ease-in-out`,
+                          zIndex: 2,
+                        },
+                        // Main water body animation with subtle depth gradient
+                        animation: `${waterShimmer} 4s infinite ease-in-out`,
+                        background: 'linear-gradient(135deg, #0066aa 0%, #0088cc 25%, #00aadd 50%, #0088cc 75%, #0066aa 100%), linear-gradient(to bottom, #00aadd 0%, #0077aa 100%)',
+                        backgroundSize: '30px 30px, 100% 100%',
+                        backgroundBlendMode: 'overlay',
+                        // Pseudo elements for additional visual effects - tiny bubbles
+                        '&': {
+                          '&:before, &:after': {
+                            content: '""',
+                            display: 'block',
+                            position: 'absolute',
+                            width: '4px',
+                            height: '4px',
+                            borderRadius: '50%',
+                            backgroundColor: 'rgba(255, 255, 255, 0.5)',
+                            boxShadow: 'rgba(255, 255, 255, 0.3) 10px 5px 0px, rgba(255, 255, 255, 0.4) -5px 10px 0px, rgba(255, 255, 255, 0.3) 5px -5px 0px',
+                            animation: `${waterBubble} ${Math.floor(Math.random() * 4) + 6}s infinite ease-out ${Math.floor(Math.random() * 3)}s`,
+                            zIndex: 5,
+                          }
+                        },
                       }),
                       
-                      // Regular flat view water styling
+                      // Regular flat view water styling - improved to match isometric quality
                       ...(isWater && !unitAtPos && !hasCoin && viewMode === 'flat' && {
-                        backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.2) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.2) 75%, transparent 75%, transparent)',
-                        backgroundSize: '10px 10px'
+                        position: 'relative',
+                        overflow: 'hidden',
+                        backgroundColor: '#0088cc',
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.3) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0.3) 75%, transparent 75%, transparent)',
+                          backgroundSize: '10px 10px',
+                          animation: `${waterWave} 4s infinite linear`,
+                          zIndex: 1,
+                        },
+                        '&::after': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundImage: 'linear-gradient(-45deg, rgba(255,255,255,0.2) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.2) 75%, transparent 75%, transparent)',
+                          backgroundSize: '7px 7px',
+                          animation: `${waterWave2} 3s infinite linear`,
+                          zIndex: 2,
+                        },
+                        animation: `${waterShimmer} 4s infinite ease-in-out`,
                       }),
                       
                       // Coin animations in isometric view
