@@ -283,8 +283,8 @@ class GameServer:
                             "height": room.height,
                             "waterProbability": room.water_probability,
                             "numCoins": room.num_coins,
-                            "unitsPerPlayer": room.units_per_player
-                        }
+                            "unitsPerPlayer": room.units_per_player,
+                        },
                     }
                 )
 
