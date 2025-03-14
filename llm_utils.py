@@ -1,5 +1,7 @@
+import datetime
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict, Generic, List, Optional, Type, TypeVar, cast
 
 from dotenv import load_dotenv
@@ -9,6 +11,44 @@ from pydantic import BaseModel
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Define logs directory
+LOGS_DIR = Path("logs/llm_calls")
+
+
+def ensure_logs_directory() -> None:
+    """Ensure the logs directory exists."""
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def log_model_call(model: str, messages: List[ChatCompletionMessageParam], response: str) -> None:
+    """
+    Log a model call to a file.
+
+    Args:
+        model: The model used
+        messages: The messages sent to the model
+        response: The response from the model
+    """
+    ensure_logs_directory()
+
+    # Create a timestamp for the log filename
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    log_file = LOGS_DIR / f"{timestamp}_{model.replace('/', '-')}.txt"
+
+    with open(log_file, "w", encoding="utf-8") as f:
+        f.write(f"Model: {model}\n")
+        f.write(f"Timestamp: {datetime.datetime.now().isoformat()}\n\n")
+
+        f.write("=== INPUT ===\n")
+        for msg in messages:
+            role = msg.get("role", "UNKNOWN").upper()
+            content = msg.get("content", "<no content>")
+            f.write(f"\n--- {role} ---\n")
+            f.write(f"{content}\n")
+
+        f.write("\n=== OUTPUT ===\n")
+        f.write(response)
 
 
 class Messages:
@@ -81,6 +121,10 @@ def call_openrouter(
     content = completion.choices[0].message.content
     if content is None:
         raise ValueError("No content in response")
+
+    # Log the model call
+    log_model_call(model, openai_messages, content)
+
     return content
 
 
@@ -126,6 +170,9 @@ def call_openrouter_structured(
 
     if raw_response is None:
         raise ValueError("No content in response")
+
+    # Log the model call
+    log_model_call(model, openai_messages, raw_response)
 
     # Check if the model refused to respond
     refusal = getattr(message, "refusal", None)
